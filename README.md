@@ -1,0 +1,1 @@
+# WP-Content-Security-Policy-Plugin
