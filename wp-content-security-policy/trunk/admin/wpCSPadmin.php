@@ -409,10 +409,11 @@ class wpCSPAdmin{
 				
 			$charset_collate = $wpdb->get_charset_collate();
 			
+			// Limit blocked_uri to 900 characters so key doesn't go above 1000 characters which can break some MySQL implementations.
 			$sql = "CREATE TABLE ".$LogTableName." (
 										id mediumint(9) NOT NULL AUTO_INCREMENT,
 										violated_directive varchar(50) NOT NULL default '',
-										blocked_uri varchar(1024) NOT NULL default '',
+										blocked_uri varchar(900) NOT NULL default '',
 										document_uri varchar(1024) NOT NULL default '',
 										useragent varchar(1024) NOT NULL default '',
 										remoteaddress varchar(1024) NOT NULL default '',

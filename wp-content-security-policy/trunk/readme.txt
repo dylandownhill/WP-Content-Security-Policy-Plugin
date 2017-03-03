@@ -147,6 +147,8 @@ Usually you would want to keep security as strict as possible while still allowi
 
 == Changelog ==
 
+= 1.5 = Still in development
+* Change table column blocked_uri to 900 characters to keep related key below 1000 characters due to issue reported on forum.
 
 = 1.4 =
 * Update 'tested up to' to Wordpress 4.6
