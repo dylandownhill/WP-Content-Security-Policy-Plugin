@@ -171,4 +171,4 @@ Usually you would want to keep security as strict as possible while still allowi
 
 
 == Written By ==
-This plugin was written by Dylan Downhill, CIO of [Elixir Interactive](http://www.elixirinteractive.com/) .
+This plugin was written by Dylan Downhill, CIO of [Elixir Interactive](https://www.elixirinteractive.com/) .
