@@ -18,7 +18,7 @@ class wpCSPAdmin{
 	 * @param  WP_REST_Request  $request The current request object.
 	 * @return WP_Error|boolean
 	 */
-	public function permissions_check_edit_posts(  $request  ) {
+	public static function permissions_check_edit_posts(  $request  ) {
 		return current_user_can( 'edit_posts' );
 	}
 	
@@ -31,7 +31,7 @@ class wpCSPAdmin{
 	 * @param  string           $param   Key of the parameter. In this case it is &#039;filter&#039;.
 	 * @return WP_Error|boolean
 	 */
-	public function data_arg_sanitize_string_callback( $value, $request, $param ) {
+	public static function data_arg_sanitize_string_callback( $value, $request, $param ) {
 		// It is as simple as returning the sanitized value.
 		return sanitize_text_field( $value );
 	}
@@ -43,8 +43,8 @@ class wpCSPAdmin{
 		register_rest_route( wpCSPclass::ROUTE_NAMESPACE , '/' . wpCSPclass::ROUTE_BASE. '/RestAdmin',
 				array(
 						'methods'         => WP_REST_Server::CREATABLE,
-						'callback'        => array( $this, 'RestAdmin' ),
-						'permission_callback' => array( $this, 'permissions_check_edit_posts' ),
+						'callback'        => array( __CLASS__, 'RestAdmin' ),
+						'permission_callback' => array( __CLASS__, 'permissions_check_edit_posts' ),
 						'args'            => array(
 								'subaction' => array(
 										'required' => true,
@@ -55,37 +55,37 @@ class wpCSPAdmin{
 								'violateddirective' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 								'blockeduri' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 								'scheme' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 								'domain' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 								'path' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 								'file' => array(
 										'required' => false,
 										'type' => 'string',
-										"sanitize_callback" => array( $this, 'data_arg_sanitize_string_callback' ),
+										"sanitize_callback" => array( __CLASS__, 'data_arg_sanitize_string_callback' ),
 										'description' => '',
 								),
 						),
@@ -103,6 +103,7 @@ class wpCSPAdmin{
 		add_action( 'plugins_loaded', array(__CLASS__,'update_database') );
 		add_action( 'wpCSPAdmin_daily_event',  array(__CLASS__,'daily_maintenance')  );
 		
+		add_action( 'rest_api_init', array(__CLASS__,"register_routes"));
 
 		register_uninstall_hook(__FILE__, array(__CLASS__,"plugin_uninstall") );
 	}
@@ -883,6 +884,4 @@ class wpCSPAdmin{
 	}
 }
 
-$wpCSPAdmin = new wpCSPAdmin() ;
-$wpCSPAdmin->init();
-$wpCSPAdmin->register_routes();
+wpCSPAdmin::init();

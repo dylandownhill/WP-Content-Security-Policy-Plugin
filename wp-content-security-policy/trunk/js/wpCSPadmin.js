@@ -94,7 +94,7 @@ jQuery(document).on('click','.btnWPCSPViewErrors, .btnWPCSPAddSafeDomain, .btnWP
 	    type: "POST",
 	    error: function( response, textStatus, errorThrown ) {  
 	    	jQuery(ThisButton).fadeTo('fast',1);
-	    	jQuery(InfoBox).html( textStatus + ": " + response.responseJSON['message'] + '<br>Please Retry.' ).css('display','block');
+	    	jQuery(InfoBox).html( textStatus + ": " + response.responseText + '<br>Please Retry.' ).css('display','block');
 	    			} ,
 	    success: function( response ) {
 	    	jQuery(ThisButton).fadeTo('fast',1);
@@ -161,9 +161,9 @@ jQuery(document).on('click','.btnWPCSPClearLogFile, .btnWPCSPTestURLChecker', fu
 		    data: data,
 		    dataType: 'json',
 		    type: "POST",
-		    error: function() {  
+		    error: function( response, textStatus, errorThrown ) {
 		    	jQuery(ThisButton).fadeTo('fast',1);
-		    	jQuery(Target).html( textStatus + ": " + response.responseJSON['message'] + '<br>Please Retry.' ).removeClass('WPCSPHiddenEntry');
+		    	jQuery(Target).html( textStatus + ": " + response.responseText + '<br>Please Retry.' ).removeClass('WPCSPHiddenEntry');
 		    	} ,
 		    success: function( response ) {
 		    	jQuery(ThisButton).fadeTo('fast',1);

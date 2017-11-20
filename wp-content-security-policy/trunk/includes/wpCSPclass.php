@@ -78,17 +78,19 @@ class wpCSPclass{
 							
 	public function init() {
 		add_action('get_header', array(__CLASS__,"add_header"));
+		
+		add_action( 'rest_api_init', array(__CLASS__,"register_routes"));
 	}
 	
 	
 	/**
 	 * Register the routes for the objects of the controller.
 	 */
-	public function register_routes() {
+	public static function register_routes() {
 		register_rest_route( wpCSPclass::ROUTE_NAMESPACE , '/' . wpCSPclass::ROUTE_BASE. '/LogPolicyViolation',
 				array(
 						'methods'         => WP_REST_Server::CREATABLE,
-						'callback'        => array( $this, 'LogPolicyViolation' ),
+						'callback'        => array( __CLASS__, 'LogPolicyViolation' ),
 						//'permission_callback' => array( $this, 'permissions_check_edit_posts' ),
 						'args'            => array(
 						),
@@ -99,7 +101,7 @@ class wpCSPclass{
 	/**
 	 * Check if the call back trigger is set - if so do the work.
 	 */
-	public function LogPolicyViolation() {
+	public static function LogPolicyViolation() {
 			
 		// Get the raw POST data
 		$data = file_get_contents('php://input');
@@ -528,6 +530,4 @@ class wpCSPclass{
 		return strcasecmp( $ahost, $bhost );
 	}
 }
-$wpCSPclass = new wpCSPclass() ;
-$wpCSPclass->init();
-$wpCSPclass->register_routes();
+wpCSPclass::init();
