@@ -1,7 +1,10 @@
 <?php
-if(!empty($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME']))
+if(!empty($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])){
 	die('You can not access this page directly!');
-	
+}
+
+require_once( ABSPATH . '/wp-includes/pluggable.php' );
+
 class wpCSPclass extends WP_REST_Controller{
 	
 	const LOG_TABLE_NAME = 'wpcsplog';
@@ -525,9 +528,9 @@ class wpCSPclass extends WP_REST_Controller{
 		elseif ( empty( $bhost )) {
 			return 1;
 		}
-			return strcasecmp( $ahost, $bhost );
-		}
+		return strcasecmp( $ahost, $bhost );
 	}
-	$wpCSPclass = new wpCSPclass() ;
-	$wpCSPclass->init();
-	$wpCSPclass->register_routes();
+}
+$wpCSPclass = new wpCSPclass() ;
+$wpCSPclass->init();
+$wpCSPclass->register_routes();
