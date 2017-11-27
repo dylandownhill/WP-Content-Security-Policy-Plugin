@@ -182,6 +182,14 @@ The W3C specification allows for a different policy for each page, this plugin w
 
 Usually you would want to keep security as strict as possible while still allowing your application to run. Therefore, '*' should be avoided.
 
+= No errors are getting logged =
+
+1. First check that your site is producing CSP errors by starting the dev tools in your browser (usually F12) and checking whether anything is mentioned in the console output.
+1. If nothing is in the console output then check the page has a CSP header by looking at the page in the 'network' tab of the dev tools. Check the 'response' has a header called 'content-security-policy' or 'content-security-policy-report-only' - if this is misisng then the plugin is not running or CSP is not enabled.
+1. If there is a CSP header and nothing is reported in the console then you have no violations and everything is running as it should.
+1. If there is a CSP header and errors in the console then the REST route might not be registered properly. Go to <your domain>/wp-json and look for 'wpcsp' (usually CTRL-F for find and type in wpcsp) - if nothing is listed then the REST route is not getting registered.
+1. Look in the PHP error logs for an error - post the error, file name and line number in the support forums and I should be able to work out why it's failing.
+
 == Changelog ==
 
 = 2.0 =
