@@ -60,6 +60,9 @@ Defines valid sources of plugins.  Stops your site becoming the source of drive-
 * **media-src**<br>
 Defines valid sources of audio and video.
 
+* **base-uri**<br>
+Limit the values that can be used in the <base> entry.
+
 * **frame-src**<br>
 Defines valid sources for loading frames.
 
@@ -77,6 +80,9 @@ Restricts the set of plugins that can be invoked by limiting the types of resour
 
 * **report-uri**<br>
 URL to post information on violations of the policies you set.
+
+* **require-sri-for**<br>
+Require integrity check for scripts and/or styles.
 
 = CSP Entry Syntax =
 
@@ -191,6 +197,10 @@ Usually you would want to keep security as strict as possible while still allowi
 1. Look in the PHP error logs for an error - post the error, file name and line number in the support forums and I should be able to work out why it's failing.
 
 == Changelog ==
+
+= 2.1 =
+Improved support for CSP v3
+Added 'base-uri' and 'require-sri-for'
 
 = 2.0 =
 * Added support for various other security related header options

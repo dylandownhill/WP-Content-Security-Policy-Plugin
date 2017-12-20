@@ -73,7 +73,7 @@ global $options;
 		<th scope="row"><?php _e( 'Sandbox', 'wpcsp' ); ?></th>
 		<td class='wpcsp_option_cell'>
 			<?php 
-			$SandboxOptions = array( 
+			$Options = array( 
 									wpCSPclass::SETTINGS_OPTIONS_SANDBOX_NOTSET => 'Not Set' ,
 									wpCSPclass::SETTINGS_OPTIONS_SANDBOX_BLANKENTRY => 'Most Restrictive Sandbox' , // pseudo element I made up.
 									"allow-forms" => 'allow-forms' ,
@@ -87,7 +87,7 @@ global $options;
 			 		id="<?php echo wpCSPclass::SETTINGS_OPTIONS_SANDBOX; ?>" class='wpcsp-selectpolicysandbox'multiple="multiple" size="7">
 			<?php 
 			$CurrentOptions = !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_SANDBOX ] ) ? $options[ wpCSPclass::SETTINGS_OPTIONS_SANDBOX ] : '';
-			foreach( $SandboxOptions as $key => $option ) :
+			foreach( $Options as $key => $option ) :
 				if ( is_array( $CurrentOptions )) {
 					$selected = in_array( $key, $CurrentOptions ) ? ' selected="selected" ' : '' ;
 				}
@@ -98,6 +98,36 @@ global $options;
 			<?php endforeach; ?>
 			</select> 
 			<label class="wpcsp_option_description" for="<?php echo wpCSPclass::SETTINGS_OPTIONS_SANDBOX;?>"><?php _e( "HTML5 defines a sandbox attribute for iframe elements, intended to allow web authors to reduce the risk of including potentially untrusted content by imposing restrictions on that content's abilities. When the attribute is set, the content is forced into a unique origin, prevented from submitting forms, running script, creating or navigating other browsing contexts, and prevented from running plugins. These restrictions can be loosened by setting certain flags as the attribute's value.", 'wpcsp' ); ?></label>
+		</td>
+	</tr>
+	
+	
+	<tr class='wpcsp_option_row'>
+		<th scope="row"><?php _e( 'require-sri-for', 'wpcsp' ); ?></th>
+		<td class='wpcsp_option_cell'>
+			<?php 
+			$Options = array( 
+									"" => 'Not Set' ,
+									"script" => 'script' ,
+									"style" => 'style' ,
+									"script style" => 'script style' ,
+					) ;
+			?>
+			<select name="<?php echo wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS;?>[<?php echo wpCSPclass::SETTINGS_OPTIONS_REQUIRE_SRI; ?>][]" 
+			 		id="<?php echo wpCSPclass::SETTINGS_OPTIONS_REQUIRE_SRI; ?>" class='wpcsp-selectpolicyrequiresri' multiple="multiple" size="7">
+			<?php 
+			$CurrentOptions = !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_REQUIRE_SRI] ) ? $options[ wpCSPclass::SETTINGS_OPTIONS_REQUIRE_SRI] : '';
+			foreach( $Options as $key => $option ) :
+				if ( is_array( $CurrentOptions )) {
+					$selected = in_array( $key, $CurrentOptions ) ? ' selected="selected" ' : '' ;
+				}
+				else{
+					$selected = $key == '' ? ' selected="selected" ' : '' ;
+				}?>
+				<option value="<?php echo $key; ?>" <?php echo $selected; ?> ><?php echo $option; ?></option>
+			<?php endforeach; ?>
+			</select> 
+			<label class="wpcsp_option_description" for="<?php echo wpCSPclass::SETTINGS_OPTIONS_REQUIRE_SRI;?>"><?php _e( "The HTTP Content-Security-Policy require-sri-for directive instructs the client to require the use of Subresource Integrity for scripts or styles on the page. <a href='https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity'>See here for details on SRI</a>", 'wpcsp' ); ?></label>
 		</td>
 	</tr>
 </table>

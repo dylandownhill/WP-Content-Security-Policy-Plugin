@@ -29,6 +29,7 @@ class wpCSPclass extends WP_REST_Controller{
 	const SETTINGS_OPTIONS_REFERRER_POLICY_OPTIONS = 'wpcsp_referrer_policy_options' ;
 	const SETTINGS_OPTIONS_REPORT_URI_REPORTONLY = 'wpcsp_report_uri+reportonly' ;
 	const SETTINGS_OPTIONS_REPORT_URI_ENFORCE = 'wpcsp_report_uri_enforce' ;
+	const SETTINGS_OPTIONS_REQUIRE_SRI = 'wpcsp_require_sri_options' ;
 	
 	const PLUGIN_TRIGGER = 'wpcspReceiveCSPviol';
 	
@@ -76,6 +77,9 @@ class wpCSPclass extends WP_REST_Controller{
 			),
 			'media-src' => array( 'label' => 'Media SRC' ,
 					'description' => 'Defines valid sources of audio and video, eg HTML5 &lt;audio&gt;, &lt;video&gt; elements.' ,
+			),
+			'base-uri' => array( 'label' => 'Base URI' ,
+					'description' => "base-uri directive restricts the URLs which can be used in a document's <base> element. If this value is absent, then any URI is allowed. If this directive is absent, the user agent will use the value in the <base> element." ,
 			),
 			'manifest-src' => array( 'label' => 'Manifest SRC' ,
 					'description' => 'manifest-src directive specifies which manifest can be applied to the resource.' ,
@@ -216,6 +220,11 @@ class wpCSPclass extends WP_REST_Controller{
 				default:
 					break;
 			}
+		}
+		
+		// Require SRI - if its blank its not set, if its not blank then something needs outputting..
+		if ( !empty( $options[ self::SETTINGS_OPTIONS_REQUIRE_SRI]) ) {
+			$CSPOutput[] = "require-sri-for " . $options[ self::SETTINGS_OPTIONS_REQUIRE_SRI] ;
 		}
 		
 		// Do we want the browser to log the violations with the server, or only block without logging?
