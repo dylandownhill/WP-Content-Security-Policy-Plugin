@@ -1,0 +1,95 @@
+
+.wpcsp-form-table textarea {
+    background-color: #fff;
+    min-height: 60px;
+    max-height: 300px;
+    width: 80%;
+    float: left;
+}
+
+ .wpcsp-form-table p{
+    margin: 5px 0 1em 0;
+ }
+ 
+.wpcsp-WP_CSP_Admin label {
+	clear:both;
+	display:block;
+}
+.trWPCSPViewErrors {
+}
+.WPCSPHiddenEntry {
+    display: none !important;
+}
+.WPCSPDisabledEntry {
+    background-color: #ccc;
+    color: #999;
+}
+.tdWPCSPViolatedDirective {
+    max-width: 300px;
+    min-width: 200px;
+}
+.tdWPCSPBlockedURL {
+    max-width: 300px;
+    min-width: 200px;
+    overflow: hidden;
+}
+.tdWPCSPNumErrors {
+    max-width: 10%;
+    min-width: 50px;
+    padding-right: 10px;
+    text-align: right;
+}
+.tdWPCSPActionButtons {
+    max-width: 20%;
+    min-width: 200px;
+}
+.wpcsp-logoferrors thead td, .wpcsp_option_errors thead td {
+    font-weight: bold;
+}
+.wpcsp-logoferrors thead .tdWPCSPNumErrors {
+    font-weight: bold;
+    padding-right: 10px;
+    text-align: right;
+}
+.wpcsp_option_description {
+    clear: none;
+    float: left;
+}
+select {
+    float: left;
+}
+.wpcsp_option_row td, .wpcsp_option_row th {
+    vertical-align: top;
+    overflow: hidden;
+}
+.wpcsp_option_row th{
+	padding-top: 10px;
+	pading-right:10px;
+	min-width: 200px;
+    text-align: right;
+}
+.wpcsp-WP_CSP_Admin table {
+    border-collapse: collapse;
+}
+.wpcsp-WP_CSP_Admin table tbody tr:hover {
+    background-color: #ffffed;
+}
+.wpcsp-WP_CSP_Admin table tr td {
+    padding: 5px;
+}
+.wpcsp-WP_CSP_Admin table thead tr td {
+    background-color:#e0e0e0;
+}
+.WPCSPBlockedURLFileError{
+	clear:both;
+}
+.wpcsp_option_errors{
+	clear:both;
+	color:#ff0000;
+}
+.wpcsp_option_errors li{
+	color:#ff0000;
+}
+.wpscp_Cannot_Allow{
+	display:inline-block;
+}
