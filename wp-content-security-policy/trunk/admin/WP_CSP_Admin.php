@@ -42,7 +42,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	public function register_routes() {
 		register_rest_route( WP_CSP::ROUTE_NAMESPACE , '/' . WP_CSP::ROUTE_BASE. '/RestAdmin',
 				array(
-						'methods'         => WP_REST_Server::CREATABLE,
+						'methods'         => array( WP_REST_Server::CREATABLE, WP_REST_Server::READABLE ) ,
 						'callback'        => array( __CLASS__, 'RestAdmin' ),
 						'permission_callback' => array( __CLASS__, 'permissions_check_edit_posts' ),
 						'args'            => array(
@@ -118,7 +118,6 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		wp_enqueue_script( 'WP_CSP_Admin' );
 		
 		$Data = array(
-				//'restAdminURL' => "/wp-json/" . WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ,
 				'restAdminURL' => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
 				'restAdminNonce' => wp_create_nonce( "wp_rest" ),
 		) ;
@@ -158,12 +157,13 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		// Make sure the database table exists.
 		self::update_database() ;
 		global $options;
-		global $PolicyKeyErrors;
+		global $PolicyKeyErrors, $PolicyKeyWarnings;
 	    $options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
 	    
 	    // Go through the options looking for errors.
 	    $PolicyKeyErrors = array() ;
 	    $ErrorOutput = array() ;
+	    $WarningOutput = array() ;
 		foreach( WP_CSP::$CSP_Policies as $PolicyKey => $CSPPolicy) :
 			$selected = !empty( $options[ $PolicyKey ] ) ? $options[ $PolicyKey ] : '' ;
 			$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected ) ;
@@ -204,11 +204,26 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ]."</td></tr>" ;
 			}
 		}
+		
+		// Is CSP turned on?
 		$selected = isset( $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] : '' ;
 		if ( $selected == '' || $selected == -1 ){
 			
 			$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] = "CSP is currently turned off";
 			$ErrorOutput[] = "<tr><td>CSP Mode</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE]."</td></tr>" ;
+		}
+		
+		// Check HSTS preload setting
+		if ( isset( $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) && WP_CSP::HSTS_SUBDOMAINS_AND_PRELOAD == $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) {
+			$HSTS_ExpirySeconds = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] : '' ;
+			if ( $HSTS_ExpirySeconds < YEAR_IN_SECONDS ) {
+				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "HSTS set to &quot;preload mode&quot; but the STS max age not a year";
+				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+			}
+			else {
+				$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "Strict Transport Security set to &quot;preload mode&quot;";
+				$WarningOutput[] = "<tr><td>HSTS Preload</td><td>".$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+			}
 		}
 		?>
 		<div class="wrap">
@@ -228,6 +243,14 @@ class WP_CSP_Admin extends WP_REST_Controller{
 					</table>
 				</div>
 			<?php endif; ?>
+			<?php if ( !empty( $WarningOutput)): ?>
+				<div class="updated fade">
+					<table class='wpcsp_option_warnings'>
+						<thead><tr><td colspan='2'>Warnings found in configuration: (not errors - just check you meant to set these)</td></tr></thead>
+						<tbody><?php echo implode("",$WarningOutput);?></tbody>
+					</table>
+				</div>
+			<?php endif; ?>
           
 			<form method="post" action="options.php">
 				<?php settings_fields( WP_CSP::SETTINGS_OPTIONS_SECTION ); // Outputs nonces and other necessary items?>
@@ -237,6 +260,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 						<li><a href="#wpcsp_tabsAdmin_Control">CSP Control</a></li>
 						<li><a href="#wpcsp_tabsAdmin_CSP">Content Security Policies</a></li>
 						<li><a href="#wpcsp_tabsAdmin_Headers">Headers</a></li>
+						<li><a href="#wpcsp_tabsAdmin_V3">CSP V3</a></li>
 						<li><a href="#wpcsp_tabsAdmin_Test">Test</a></li>
 					</ul>
 					<div id='wpcsp_tabsAdmin_Control'>
@@ -249,6 +273,10 @@ class WP_CSP_Admin extends WP_REST_Controller{
 					</div>
 					<div id='wpcsp_tabsAdmin_Headers'>
 						<?php include('part-cspheaders.php'); ?>
+						<?php include('part-cspsavechanges.php'); ?>
+					</div>
+					<div id='wpcsp_tabsAdmin_V3'>
+						<?php include('part-cspv3.php'); ?>
 						<?php include('part-cspsavechanges.php'); ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_Test'>
@@ -276,16 +304,18 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		// Get some display information for the user.
 		$LogTableName = WP_CSP::LogTableName();
 		$SinceDate = $wpdb->get_var( "select min( CreatedOn ) from " . $LogTableName );
-		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from ".$LogTableName." WHERE 1 group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
+		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from ".$LogTableName." WHERE violated_directive <> '' AND blocked_uri <> '' group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
 		$Counter = 0 ;
+		$TargetHeaderID = "WPCSPTargetRow" . $Counter++ ;
 		?>
 	     <div class="wrap">
 	     	<div class="wpcsp-WP_CSP_Admin wpcsp-logadmin">
 	 
 		          <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-		           <?php $Target = "WPCSPTargetRow" . $Counter++ ;?>
-		          <p data-target='#<?php echo $Target ;?>'>Errors received since <?php echo $SinceDate; ?>. <input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e('Clear Log File','wpcsp') ?>" /></p>
-		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $Target;?>'></p>
+		          <p data-target='#<?php echo $TargetHeaderID;?>'>Errors received since <?php echo $SinceDate; ?>. 
+		          		<input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e('Clear Log File','wpcsp') ?>" />
+		          </p>
+		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetHeaderID ;?>'></p>
 		          <table class='wpcsp-logoferrors'>
 	          <thead>
 	          	<tr><td class='tdWPCSPViolatedDirective'>Violated Directive</td>
@@ -293,7 +323,6 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	          		<td class='tdWPCSPNumErrors'>Count</td>
 	          		<td class='tdWPCSPActionButtons'>Action</td></tr>
 	          </thead>
-	          <tbody>
 	          <?php 
 				foreach ($rows as $obj) :
 				// Check if we have ignored or allowed the URL since the violation was logged.
@@ -310,21 +339,22 @@ class WP_CSP_Admin extends WP_REST_Controller{
 					}
 					
 					$Counter++ ;
-					$TargetRow1 = "WPCSPTargetRow1" . $Counter ;
-					$TargetRow2 = "WPCSPTargetRow2" . $Counter ;
+					$TargetRow1ID = "WPCSPTargetRow1" . $Counter ;
+					$TargetRow2ID = "WPCSPTargetRow2" . $Counter ;
 					?>
-						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive ;?>' data-blockeduri='<?php echo $obj->blocked_uri ;?>' data-target='#<?php echo $TargetRow1 ;?>'>
+					<tbody data-group="WPCSPViewError$Counter">
+						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive ;?>' data-blockeduri='<?php echo $obj->blocked_uri ;?>'>
 							<td class='tdWPCSPViolatedDirective'><?php echo $obj->violated_directive ;?></td>
 							<td class='tdWPCSPBlockedURL'><?php echo $obj->blocked_uri ;?></td>
 							<td class='tdWPCSPNumErrors'><?php echo $obj->numerrors ; ?></td>
-							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e('View Errors','wpcsp') ?>" />
-								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e('Hide Errors','wpcsp') ?>" />
+							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e('View Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
+								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e('Hide Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
 							</td>
 						</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1ID;?>'><td colspan='4'></td></tr>
 						<?php 
 						$URIParts = parse_url( $obj->blocked_uri  ) ;
-						if ( $URIParts !== false && !empty( $URIParts['host'])):
+						if ( !empty( $URIParts['host'])):
 							$URIHostnameWildcard = '*' . substr( $URIParts['host'] , strpos($URIParts['host'],"." )) ;
 							if ( !empty( $URIParts['path'] )  ) {
 								if ( substr( $URIParts['path'] , -1 ) == '/'){
@@ -341,7 +371,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 								$URLPathFile = '' ;
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>' data-target='#<?php echo $TargetRow2 ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td><select class='WPCSPBlockedURLScheme'>
@@ -373,18 +403,19 @@ class WP_CSP_Admin extends WP_REST_Controller{
 								</td>
 								<td class='tdWPCSPActionButtons'>
 									<?php if ( isset( WP_CSP::$CSP_Policies[ $obj->violated_directive ] )) : ?>
-										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" />
+										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
 									<?php else:?>
 										<div class='wpscp_Cannot_Allow'>No allow Option</div>
 									<?php endif; ?>
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
 						<?php 
-						elseif( in_array( $URIParts['path'], array('data','inline','eval','blob','mediastream','filesystem') )) : 
-							switch( $URIParts['path'] ) {
+						elseif( ( !empty( $URIParts['path'] ) && in_array( $URIParts['path'], array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ||
+								( !empty( $obj->blocked_uri ) && in_array( $obj->blocked_uri, array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ) : 
+								switch( !empty( $URIParts['path']) ? $URIParts['path'] : $obj->blocked_uri ) {
 								case 'data':
 									$BlockRule = "data:" ;
 									break ;
@@ -403,12 +434,15 @@ class WP_CSP_Admin extends WP_REST_Controller{
 								case 'eval':
 									$BlockRule = "'unsafe-eval'" ;
 									break ;
+								case 'self':
+									$BlockRule = "'self'" ;
+									break ;
 								default:
 									$BlockRule = "";
 									break;
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>' data-target='#<?php echo $TargetRow2 ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td>&nbsp;</td>
@@ -420,26 +454,33 @@ class WP_CSP_Admin extends WP_REST_Controller{
 									</tr></table>
 								</td>
 								<td class='tdWPCSPActionButtons'>
-									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" />
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" />
+									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
+						<?php 
+						elseif ( !empty( $obj->blocked_uri )) : ?>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+								<td class='tdWPCSPBlockedURLParts' colspan='4'>
+									<p>Unknown blocked URI - could not be parsed: <?php echo esc_html( $obj->blocked_uri ); ?></p>
+								</td>
+							</tr>
 						<?php 
 						else : ?>
 							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='4'>
-									<p>No host name set - you need to add this entry manually.</p>
+									<p>Blocked URI empty</p>
 								</td>
 							</tr>
 						<?php 
 						endif;
 						?>
+						</tbody>
 				<?php 
 				endforeach ;
 				?>
-				</tbody>
 				</table>
 	          </div> <!-- end wpcsp-logadmin -->
 	     </div><!-- end wrap -->
@@ -528,7 +569,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	/**
 	 * Handle the admin ajax calls for data and setting options.
 	 */
-	public function RestAdmin( WP_REST_Request $request ) {
+	public static function RestAdmin( WP_REST_Request $request ) {
 
 		global $wpdb;
 
@@ -686,6 +727,9 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				}
 				if ( $StrippedPolicy == 'unsafeeval' && $Policy != "'unsafe-eval'") {
 					$return[] = "Entry for <strong>unsafe-eval</strong> should read <strong>'unsafe-eval'</strong> (with single quotes) - Policy: " .$Policy ; 
+				}
+				if ( $StrippedPolicy == 'unsafehashedattributes' && $Policy != "'unsafe-hashed-attributes'") {
+					$return[] = "Entry for <strong>unsafe-hashed-attributes</strong> should read <strong>'unsafe-hashed-attributes'</strong> (with single quotes) - Policy: " .$Policy ;
 				}
 				if ( $StrippedPolicy == 'none' && $Policy != "'none'") {
 					$return[] = "Entry for <strong>none</strong> should read <strong>'none'</strong> (with single quotes) - Policy: " .$Policy ; 
@@ -884,11 +928,12 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	}
 }
 
-add_action('init',array("WP_CSP_Admin","init"));
+$WP_CSP_Admin = new WP_CSP_Admin() ;
+add_action('init',array( $WP_CSP_Admin ,"init"));
 // If action "rest_api_init" hasn't run yet then use that, otherwise we have the route server in place, just register route
 if ( did_action('rest_api_init') == 0 ){
-	add_action('rest_api_init',array("WP_CSP_Admin","register_routes"));
+	add_action('rest_api_init',array( $WP_CSP_Admin,"register_routes"));
 }
 else {
-	WP_CSP_Admin::register_routes();
+	$WP_CSP_Admin->register_routes();
 }

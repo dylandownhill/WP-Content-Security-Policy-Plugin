@@ -10,8 +10,12 @@
  .wpcsp-form-table p{
     margin: 5px 0 1em 0;
  }
+ .wpcsp_option_cell{
+ 	display:flex;
+ 	flex-flow: column;
+ }
  
-.wpcsp-wpcspadmin label {
+.wpcsp-WP_CSP_Admin label {
 	clear:both;
 	display:block;
 }
@@ -51,9 +55,8 @@
     padding-right: 10px;
     text-align: right;
 }
-.wpcsp_option_description {
-    clear: none;
-    float: left;
+.wpcsp_option_description, wpcsp_option_fallback {
+    clear: both;
 }
 select {
     float: left;
@@ -68,27 +71,30 @@ select {
 	min-width: 200px;
     text-align: right;
 }
-.wpcsp-wpcspadmin table {
+.wpcsp-WP_CSP_Admin table {
     border-collapse: collapse;
 }
-.wpcsp-wpcspadmin table tbody tr:hover {
-    background-color: #ffffed;
+.wpcsp-WP_CSP_Admin table tbody tr:hover, tbody[data-group]:hover {
+    background-color: #ffffcc;
+    border:1px solid red;
 }
-.wpcsp-wpcspadmin table tr td {
+tbody[data-group]:hover tr:hover{
+	border:none;
+}
+.wpcsp-WP_CSP_Admin table tr td {
     padding: 5px;
 }
-.wpcsp-wpcspadmin table thead tr td {
+.wpcsp-WP_CSP_Admin table thead tr td {
     background-color:#e0e0e0;
 }
 .WPCSPBlockedURLFileError{
 	clear:both;
 }
-.wpcsp_option_errors{
-	clear:both;
+.wpcsp_option_errors, .wpcsp_option_errors li{
 	color:#ff0000;
 }
-.wpcsp_option_errors li{
-	color:#ff0000;
+.wpcsp_option_warnings, .wpcsp_option_warnings li{
+	color:#800080;
 }
 .wpscp_Cannot_Allow{
 	display:inline-block;

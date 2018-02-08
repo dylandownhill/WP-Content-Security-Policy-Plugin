@@ -36,22 +36,37 @@ function WPCSPHandleLogAdmin( ) {
 
 jQuery(document).on('click','.btnWPCSPHideErrors', function() {
 	var RowInfo = jQuery(this).closest('tr');
-	var Target = jQuery(RowInfo).data('target');
+	var Target = jQuery(this).data('target');
 	
 	jQuery( this ).addClass('WPCSPHiddenEntry');
 	jQuery( '.btnWPCSPViewErrors', RowInfo ).removeClass('WPCSPHiddenEntry');
 	jQuery( Target ).addClass('WPCSPHiddenEntry') ;
 });
 	
-jQuery(document).on('click','.btnWPCSPViewErrors, .btnWPCSPAddSafeDomain, .btnWPCSPIgnoreDomain', function() {
-	
-	var RowInfo = jQuery(this).closest('tr');
-	var Target = jQuery(RowInfo).data('target');
-	var violateddirective = jQuery(RowInfo).data('violateddirective');
-	var HideCurrentRowOnSuccess = false ;
-	var InfoBox = jQuery( RowInfo ).find('.WPCSPInfoBox');
-	var data = {} ;
+
+jQuery(document).on('click','.btnWPCSPConvertToV3', function() {
 	var ThisButton = jQuery(this);
+	var RowInfo = jQuery(this).closest('tr');
+	var Target = jQuery(this).data('target');
+	var InfoBox = jQuery( RowInfo ).find('.WPCSPInfoBox');
+	jQuery('.WPCSPInfoBox:visible').css('display','none');
+
+	if ( jQuery(this).hasClass('btnWPCSPConvertToV3')) {
+		var CSPV3Values = "'unsafe-inline' https: 'strict-dynamic'" ;
+		jQuery("#script-src").val( CSPV3Values );
+		jQuery( Target ).html("script-src set to CSP v3 default values &quot;"+CSPV3Values +"&quot; - use the save button to save these changes")
+	}
+});
+jQuery(document).on('click','.btnWPCSPViewErrors, .btnWPCSPAddSafeDomain, .btnWPCSPIgnoreDomain', function() {
+
+	var ThisButton = jQuery(this);
+	var RowInfo = jQuery(this).closest('tr');
+	var Target = jQuery(this).data('target');
+	var violateddirective = jQuery(RowInfo).data('violateddirective');
+	var InfoBox = jQuery( RowInfo ).find('.WPCSPInfoBox');
+	
+	var HideCurrentRowOnSuccess = false ;
+	var data = {} ;
 	
 	if ( jQuery(this).hasClass('btnWPCSPViewErrors')) {
 		data = {
@@ -142,7 +157,6 @@ jQuery(document).on('click','.btnWPCSPClearLogFile, .btnWPCSPTestURLChecker', fu
 				subaction : 'clearLogFile'
 			};
 		RowInfo = jQuery(this).closest('p'); 
-		Target = jQuery(RowInfo).data('target'); 
 	}
 	if ( jQuery(this).hasClass('btnWPCSPTestURLChecker')) {
 		data = {
@@ -150,8 +164,8 @@ jQuery(document).on('click','.btnWPCSPClearLogFile, .btnWPCSPTestURLChecker', fu
 			};
 		RowInfo = jQuery(this).closest('tr'); 
 	}
-	var Target = jQuery(RowInfo).data('target'); 
-	jQuery(Target).addClass('WPCSPHiddenEntry') ;
+	var Target = jQuery(this).data('target'); 
+	jQuery(Target).html('').addClass('WPCSPHiddenEntry') ;
 	
 	if ( data !== undefined ) {
 		jQuery(ThisButton).fadeTo('slow',0.3);

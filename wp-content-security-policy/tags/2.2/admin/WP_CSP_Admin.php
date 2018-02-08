@@ -3,13 +3,13 @@ if(!empty($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVE
 	die('You can not access this page directly!');
 }
 
-class wpCSPAdmin extends WP_REST_Controller{
+class WP_CSP_Admin extends WP_REST_Controller{
 	
 	/**
-	 * Nearly all the constants are in the wpCSPclass class, because that class needs a bunch of the settings, but not access to wpCSPAdmin
+	 * Nearly all the constants are in the WP_CSP class, because that class needs a bunch of the settings, but not access to WP_CSP_Admin
 	 */
 	const wpCSPDBVersionOptionName = 'wpcsp-dbVersion';
-	const wpCSPDBVersion = '1.1';
+	const wpCSPDBVersion = '1.2';
 	const wpCSPDBCronJobName = 'wpcsp-DBDailyMaintenance';
 	
 	/**
@@ -40,9 +40,9 @@ class wpCSPAdmin extends WP_REST_Controller{
 	 * Register the routes for the objects of the controller.
 	 */
 	public function register_routes() {
-		register_rest_route( wpCSPclass::ROUTE_NAMESPACE , '/' . wpCSPclass::ROUTE_BASE. '/RestAdmin',
+		register_rest_route( WP_CSP::ROUTE_NAMESPACE , '/' . WP_CSP::ROUTE_BASE. '/RestAdmin',
 				array(
-						'methods'         => WP_REST_Server::CREATABLE,
+						'methods'         => array( WP_REST_Server::CREATABLE, WP_REST_Server::READABLE ) ,
 						'callback'        => array( __CLASS__, 'RestAdmin' ),
 						'permission_callback' => array( __CLASS__, 'permissions_check_edit_posts' ),
 						'args'            => array(
@@ -101,7 +101,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 		add_action( 'admin_enqueue_scripts', array(__CLASS__,'add_styles_and_scripts')  );
 		
 		add_action( 'plugins_loaded', array(__CLASS__,'update_database') );
-		add_action( 'wpCSPAdmin_daily_event',  array(__CLASS__,'daily_maintenance')  );
+		add_action( self::wpCSPDBCronJobName,  array(__CLASS__,'daily_maintenance')  );
 		
 		wp_enqueue_script('jquery-ui-core', array( 'jquery' ));
 		wp_enqueue_script('jquery-ui-tabs', array( 'jquery-ui-core' ));
@@ -112,17 +112,17 @@ class wpCSPAdmin extends WP_REST_Controller{
 	
 	
 	public static function add_styles_and_scripts() {
-		wp_register_script( 'wpcspadmin', plugins_url( '../js/wpCSPadmin.js', __FILE__ ), array( 'jquery' ),false,true );
-		wp_enqueue_style('wpcspadmin', plugins_url( '../css/wpCSPadmin.css', __FILE__ ) );
+		wp_register_script( 'WP_CSP_Admin', plugins_url( '../js/WP_CSP_Admin.js', __FILE__ ), array( 'jquery' ),false,true );
+		wp_enqueue_style('WP_CSP_Admin', plugins_url( '../css/WP_CSP_Admin.css', __FILE__ ) );
 		
-		wp_enqueue_script( 'wpcspadmin' );
+		wp_enqueue_script( 'WP_CSP_Admin' );
 		
 		$Data = array(
-				'restAdminURL' => "/wp-json/" . wpCSPclass::ROUTE_NAMESPACE . "/" . wpCSPclass::ROUTE_BASE . "/RestAdmin" ,
+				'restAdminURL' => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
 				'restAdminNonce' => wp_create_nonce( "wp_rest" ),
 		) ;
 		
-		wp_localize_script( 'wpcspadmin', 'WPCSP', $Data );
+		wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $Data );
 	}
 	
 	/**
@@ -132,15 +132,15 @@ class wpCSPAdmin extends WP_REST_Controller{
 		add_submenu_page(
 				'options-general.php',          // admin page slug - under settings entry
 				__( 'WP Content Security Policy', 'wpcsp' ), // page title
-				__( 'Content Security Policy Options', 'wpcsp' ), // menu title
+				__( 'CSP Options', 'wpcsp' ), // menu title
 				'manage_options',               // capability required to see the page
 				'wpcsp_options',                // admin page slug, e.g. options-general.php?page=wporg_options
 				array( __CLASS__, 'options_page')            // callback function to display the options page
 				);
 		add_submenu_page(
 				'options-general.php',          // admin page slug - under settings entry
-				__( 'WP Content Security Log', 'wpcsp' ), // page title
-				__( 'Content Security Policy Log', 'wpcsp' ), // menu title
+				__( 'WP Content Security Policy Log', 'wpcsp' ), // page title
+				__( 'CSP Log', 'wpcsp' ), // menu title
 				'manage_options',               // capability required to see the page
 				'wpcsp_log',                // admin page slug, e.g. options-general.php?page=wporg_options
 				array( __CLASS__, 'log_page')            // callback function to display the options page
@@ -157,14 +157,16 @@ class wpCSPAdmin extends WP_REST_Controller{
 		// Make sure the database table exists.
 		self::update_database() ;
 		global $options;
-	    $options = get_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS );
+		global $PolicyKeyErrors, $PolicyKeyWarnings;
+	    $options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
 	    
 	    // Go through the options looking for errors.
 	    $PolicyKeyErrors = array() ;
 	    $ErrorOutput = array() ;
-		foreach( wpCSPclass::$CSP_Policies as $PolicyKey => $CSPPolicy) :
+	    $WarningOutput = array() ;
+		foreach( WP_CSP::$CSP_Policies as $PolicyKey => $CSPPolicy) :
 			$selected = !empty( $options[ $PolicyKey ] ) ? $options[ $PolicyKey ] : '' ;
-			$CSPOptions = wpCSPclass::CleanPolicyOptionText( $selected ) ;
+			$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected ) ;
 			$Errors = self::FindCSPErrors( $PolicyKey, $CSPOptions );
 			if ( !empty( $Errors )) {
 				$PolicyKeyErrors[ $PolicyKey ] = "<ul><li>". implode("</li><li>",$Errors) . "</li></ul>";
@@ -172,45 +174,60 @@ class wpCSPAdmin extends WP_REST_Controller{
 			}
 		endforeach;
 		
-		$selected = !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '';
-		$CSPOptions = wpCSPclass::CleanPolicyOptionText( $selected ) ;
+		$selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '';
+		$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected ) ;
 		$Errors = self::FindCSPErrors( 'URLSToIgnore', $CSPOptions );
 		if ( !empty( $Errors )) {
 			$PolicyKeyErrors[ 'URLSToIgnore'] = "<ul><li>". implode("</li><li>",$Errors) . "</li></ul>";
 			$ErrorOutput[] = "<tr><td><a href='#anchor". $PolicyKey ."'>".$PolicyKey."</a></td><td>".$PolicyKeyErrors[ 'URLSToIgnore' ]."</td></tr>" ;
 		}
 		
-		if ( !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ) ) {
-			$ReportURI = $options[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ;
+		if ( !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ) ) {
+			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ;
 			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL)) {
-				$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] = "REPORT-URI url invalid: $ReportURI";
-				$ErrorOutput[] = "<tr><td>REPORT-URI - Report Only</td><td>".$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ]."</td></tr>" ;
+				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] = "REPORT-URI url invalid: $ReportURI";
+				$ErrorOutput[] = "<tr><td>REPORT-URI - Report Only</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ]."</td></tr>" ;
 			}
 		}
-		if ( !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ) ) {
-			$ReportURI = $options[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ;
+		if ( !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ) ) {
+			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ;
 			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL)) {
-				$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] = "REPORT-URI url invalid: $ReportURI";
-				$ErrorOutput[] = "<tr><td>REPORT-URI - Enforce</td><td>".$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_REPORT_URI_ENFORCE]."</td></tr>" ;
+				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] = "REPORT-URI url invalid: $ReportURI";
+				$ErrorOutput[] = "<tr><td>REPORT-URI - Enforce</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE]."</td></tr>" ;
 			}
 		}
 		
-		if ( isset( $options[ wpCSPclass::SETTINGS_OPTIONS_FRAME_OPTIONS] ) && 3 == $options[ wpCSPclass::SETTINGS_OPTIONS_FRAME_OPTIONS] ) {
-			$AllowFromURL = $options[ wpCSPclass::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] ;
+		if ( isset( $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS] ) && 3 == $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS] ) {
+			$AllowFromURL = $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] ;
 			if ( !filter_var($AllowFromURL, FILTER_VALIDATE_URL)) {
-				$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] = "ALLOW-FROM url invalid: $AllowFromURL";
-				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ]."</td></tr>" ;
+				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] = "ALLOW-FROM url invalid: $AllowFromURL";
+				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ]."</td></tr>" ;
 			}
 		}
-		$selected = isset( $options[ wpCSPclass::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ wpCSPclass::SETTINGS_OPTIONS_CSP_MODE ] : '' ;
+		
+		// Is CSP turned on?
+		$selected = isset( $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] : '' ;
 		if ( $selected == '' || $selected == -1 ){
 			
-			$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_CSP_MODE ] = "CSP is currently turned off";
-			$ErrorOutput[] = "<tr><td>CSP Mode</td><td>".$PolicyKeyErrors[ wpCSPclass::SETTINGS_OPTIONS_CSP_MODE]."</td></tr>" ;
+			$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] = "CSP is currently turned off";
+			$ErrorOutput[] = "<tr><td>CSP Mode</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE]."</td></tr>" ;
+		}
+		
+		// Check HSTS preload setting
+		if ( isset( $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) && WP_CSP::HSTS_SUBDOMAINS_AND_PRELOAD == $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) {
+			$HSTS_ExpirySeconds = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] : '' ;
+			if ( $HSTS_ExpirySeconds < YEAR_IN_SECONDS ) {
+				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "HSTS set to &quot;preload mode&quot; but the STS max age not a year";
+				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+			}
+			else {
+				$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "Strict Transport Security set to &quot;preload mode&quot;";
+				$WarningOutput[] = "<tr><td>HSTS Preload</td><td>".$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+			}
 		}
 		?>
 		<div class="wrap">
-			<div class="wpcsp-wpcspadmin wpcsp-optionsadmin">
+			<div class="wpcsp-WP_CSP_Admin wpcsp-optionsadmin">
 	          
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 	      
@@ -226,15 +243,24 @@ class wpCSPAdmin extends WP_REST_Controller{
 					</table>
 				</div>
 			<?php endif; ?>
+			<?php if ( !empty( $WarningOutput)): ?>
+				<div class="updated fade">
+					<table class='wpcsp_option_warnings'>
+						<thead><tr><td colspan='2'>Warnings found in configuration: (not errors - just check you meant to set these)</td></tr></thead>
+						<tbody><?php echo implode("",$WarningOutput);?></tbody>
+					</table>
+				</div>
+			<?php endif; ?>
           
 			<form method="post" action="options.php">
-				<?php settings_fields( wpCSPclass::SETTINGS_OPTIONS_SECTION ); // Outputs nonces and other necessary items?>
+				<?php settings_fields( WP_CSP::SETTINGS_OPTIONS_SECTION ); // Outputs nonces and other necessary items?>
 	                                       
 				<div id="wpcsp_tabsAdmin" class='wpcsp_tabsAdmin'>
 					<ul>
 						<li><a href="#wpcsp_tabsAdmin_Control">CSP Control</a></li>
 						<li><a href="#wpcsp_tabsAdmin_CSP">Content Security Policies</a></li>
 						<li><a href="#wpcsp_tabsAdmin_Headers">Headers</a></li>
+						<li><a href="#wpcsp_tabsAdmin_V3">CSP V3</a></li>
 						<li><a href="#wpcsp_tabsAdmin_Test">Test</a></li>
 					</ul>
 					<div id='wpcsp_tabsAdmin_Control'>
@@ -247,6 +273,10 @@ class wpCSPAdmin extends WP_REST_Controller{
 					</div>
 					<div id='wpcsp_tabsAdmin_Headers'>
 						<?php include('part-cspheaders.php'); ?>
+						<?php include('part-cspsavechanges.php'); ?>
+					</div>
+					<div id='wpcsp_tabsAdmin_V3'>
+						<?php include('part-cspv3.php'); ?>
 						<?php include('part-cspsavechanges.php'); ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_Test'>
@@ -269,21 +299,23 @@ class wpCSPAdmin extends WP_REST_Controller{
 		self::update_database() ;
 		
 		// Options as entered by the site admin.
-		$CSPOptions = get_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS );
+		$CSPOptions = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
 		
 		// Get some display information for the user.
-		$LogTableName = wpCSPclass::LogTableName();
+		$LogTableName = WP_CSP::LogTableName();
 		$SinceDate = $wpdb->get_var( "select min( CreatedOn ) from " . $LogTableName );
-		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from ".$LogTableName." WHERE 1 group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
+		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from ".$LogTableName." WHERE violated_directive <> '' AND blocked_uri <> '' group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
 		$Counter = 0 ;
+		$TargetHeaderID = "WPCSPTargetRow" . $Counter++ ;
 		?>
 	     <div class="wrap">
-	     	<div class="wpcsp-wpcspadmin wpcsp-logadmin">
+	     	<div class="wpcsp-WP_CSP_Admin wpcsp-logadmin">
 	 
 		          <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-		           <?php $Target = "WPCSPTargetRow" . $Counter++ ;?>
-		          <p data-target='#<?php echo $Target ;?>'>Errors received since <?php echo $SinceDate; ?>. <input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e('Clear Log File','wpcsp') ?>" /></p>
-		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $Target;?>'></p>
+		          <p data-target='#<?php echo $TargetHeaderID;?>'>Errors received since <?php echo $SinceDate; ?>. 
+		          		<input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e('Clear Log File','wpcsp') ?>" />
+		          </p>
+		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetHeaderID ;?>'></p>
 		          <table class='wpcsp-logoferrors'>
 	          <thead>
 	          	<tr><td class='tdWPCSPViolatedDirective'>Violated Directive</td>
@@ -291,13 +323,12 @@ class wpCSPAdmin extends WP_REST_Controller{
 	          		<td class='tdWPCSPNumErrors'>Count</td>
 	          		<td class='tdWPCSPActionButtons'>Action</td></tr>
 	          </thead>
-	          <tbody>
 	          <?php 
 				foreach ($rows as $obj) :
 				// Check if we have ignored or allowed the URL since the violation was logged.
-					$IsURIIgnored = wpCSPclass::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ;
+					$IsURIIgnored = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ;
 					if ( !empty( $CSPOptions[ $obj->violated_directive ])){
-						$IsURIAllowed = wpCSPclass::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ $obj->violated_directive ] ) ;
+						$IsURIAllowed = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ $obj->violated_directive ] ) ;
 					}
 					else {
 						$IsURIAllowed = false ;
@@ -308,21 +339,22 @@ class wpCSPAdmin extends WP_REST_Controller{
 					}
 					
 					$Counter++ ;
-					$TargetRow1 = "WPCSPTargetRow1" . $Counter ;
-					$TargetRow2 = "WPCSPTargetRow2" . $Counter ;
+					$TargetRow1ID = "WPCSPTargetRow1" . $Counter ;
+					$TargetRow2ID = "WPCSPTargetRow2" . $Counter ;
 					?>
-						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive ;?>' data-blockeduri='<?php echo $obj->blocked_uri ;?>' data-target='#<?php echo $TargetRow1 ;?>'>
+					<tbody data-group="WPCSPViewError$Counter">
+						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive ;?>' data-blockeduri='<?php echo $obj->blocked_uri ;?>'>
 							<td class='tdWPCSPViolatedDirective'><?php echo $obj->violated_directive ;?></td>
 							<td class='tdWPCSPBlockedURL'><?php echo $obj->blocked_uri ;?></td>
 							<td class='tdWPCSPNumErrors'><?php echo $obj->numerrors ; ?></td>
-							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e('View Errors','wpcsp') ?>" />
-								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e('Hide Errors','wpcsp') ?>" />
+							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e('View Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
+								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e('Hide Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
 							</td>
 						</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1ID;?>'><td colspan='4'></td></tr>
 						<?php 
 						$URIParts = parse_url( $obj->blocked_uri  ) ;
-						if ( $URIParts !== false && !empty( $URIParts['host'])):
+						if ( !empty( $URIParts['host'])):
 							$URIHostnameWildcard = '*' . substr( $URIParts['host'] , strpos($URIParts['host'],"." )) ;
 							if ( !empty( $URIParts['path'] )  ) {
 								if ( substr( $URIParts['path'] , -1 ) == '/'){
@@ -339,7 +371,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 								$URLPathFile = '' ;
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>' data-target='#<?php echo $TargetRow2 ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td><select class='WPCSPBlockedURLScheme'>
@@ -370,19 +402,20 @@ class wpCSPAdmin extends WP_REST_Controller{
 									</tr></table>
 								</td>
 								<td class='tdWPCSPActionButtons'>
-									<?php if ( isset( wpCSPclass::$CSP_Policies[ $obj->violated_directive ] )) : ?>
-										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" />
+									<?php if ( isset( WP_CSP::$CSP_Policies[ $obj->violated_directive ] )) : ?>
+										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
 									<?php else:?>
 										<div class='wpscp_Cannot_Allow'>No allow Option</div>
 									<?php endif; ?>
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
 						<?php 
-						elseif( in_array( $URIParts['path'], array('data','inline','eval','blob','mediastream','filesystem') )) : 
-							switch( $URIParts['path'] ) {
+						elseif( ( !empty( $URIParts['path'] ) && in_array( $URIParts['path'], array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ||
+								( !empty( $obj->blocked_uri ) && in_array( $obj->blocked_uri, array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ) : 
+								switch( !empty( $URIParts['path']) ? $URIParts['path'] : $obj->blocked_uri ) {
 								case 'data':
 									$BlockRule = "data:" ;
 									break ;
@@ -401,12 +434,15 @@ class wpCSPAdmin extends WP_REST_Controller{
 								case 'eval':
 									$BlockRule = "'unsafe-eval'" ;
 									break ;
+								case 'self':
+									$BlockRule = "'self'" ;
+									break ;
 								default:
 									$BlockRule = "";
 									break;
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>' data-target='#<?php echo $TargetRow2 ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td>&nbsp;</td>
@@ -418,26 +454,33 @@ class wpCSPAdmin extends WP_REST_Controller{
 									</tr></table>
 								</td>
 								<td class='tdWPCSPActionButtons'>
-									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" />
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" />
+									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
+						<?php 
+						elseif ( !empty( $obj->blocked_uri )) : ?>
+							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+								<td class='tdWPCSPBlockedURLParts' colspan='4'>
+									<p>Unknown blocked URI - could not be parsed: <?php echo esc_html( $obj->blocked_uri ); ?></p>
+								</td>
+							</tr>
 						<?php 
 						else : ?>
 							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='4'>
-									<p>No host name set - you need to add this entry manually.</p>
+									<p>Blocked URI empty</p>
 								</td>
 							</tr>
 						<?php 
 						endif;
 						?>
+						</tbody>
 				<?php 
 				endforeach ;
 				?>
-				</tbody>
 				</table>
 	          </div> <!-- end wpcsp-logadmin -->
 	     </div><!-- end wrap -->
@@ -450,7 +493,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 	 */
 	public static function update_database() {
 		global $wpdb;
-		$LogTableName = wpCSPclass::LogTableName();
+		$LogTableName = WP_CSP::LogTableName();
 		
 		// Check if the table exists - if not force it to be created.
 		if( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s",$LogTableName ) ) != $LogTableName) {
@@ -460,7 +503,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 		else {
 			$installed_ver = get_option( self::wpCSPDBVersionOptionName );
 		}
-		
+
 		if ( $installed_ver != self::wpCSPDBVersion ) {
 				
 			$charset_collate = $wpdb->get_charset_collate();
@@ -474,6 +517,9 @@ class wpCSPAdmin extends WP_REST_Controller{
 										remoteaddress varchar(1024) NOT NULL default '',
 										information text NOT NULL default '',
 										createdon timestamp DEFAULT CURRENT_TIMESTAMP,
+										source_file varchar(1024) NOT NULL default '',
+										linenumber varchar(50) NOT NULL default '',
+										disposition varchar(50) NOT NULL default '',
 										PRIMARY KEY  id (id),
 										KEY  violated_directive (violated_directive, blocked_uri(191) ),
 										KEY  createdon (createdon)
@@ -482,8 +528,11 @@ class wpCSPAdmin extends WP_REST_Controller{
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 			$return = dbDelta( $sql );
 			
-			// Store the table version in the database so we know whether it needs updating in the future.
-			update_option( self::wpCSPDBVersionOptionName, self::wpCSPDBVersion );
+			// Only stop doing the update if nothing needs changing.
+			if ( empty( $return )){
+				// Store the table version in the database so we know whether it needs updating in the future.
+				update_option( self::wpCSPDBVersionOptionName, self::wpCSPDBVersion );
+			}
 		}
 		
 	}
@@ -495,7 +544,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 	public static function daily_maintenance() {
 		global $wpdb;
 		// Stop the log getting out of control.
-		$wpdb->query( 'DELETE  FROM '.wpCSPclass::LogTableName().' where createdon < NOW() - INTERVAL 1 WEEK' );
+		$wpdb->query( 'DELETE  FROM '.WP_CSP::LogTableName().' where createdon < NOW() - INTERVAL 1 WEEK' );
 	}
 
 	/**
@@ -504,7 +553,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 	private static function ClearLogFile() {
 		global $wpdb;
 		// Stop the log getting out of control.
-		$wpdb->query( 'DELETE  FROM '. wpCSPclass::LogTableName() );
+		$wpdb->query( 'DELETE  FROM '. WP_CSP::LogTableName() );
 	}
 	
 
@@ -512,15 +561,15 @@ class wpCSPAdmin extends WP_REST_Controller{
 	 * Register the settings
 	 */
 	public static function register_settings() {
-		register_setting( wpCSPclass::SETTINGS_OPTIONS_SECTION,  // settings section
-							wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS // setting name
+		register_setting( WP_CSP::SETTINGS_OPTIONS_SECTION,  // settings section
+							WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS // setting name
 		);
 	}
 
 	/**
 	 * Handle the admin ajax calls for data and setting options.
 	 */
-	public function RestAdmin( WP_REST_Request $request ) {
+	public static function RestAdmin( WP_REST_Request $request ) {
 
 		global $wpdb;
 
@@ -542,7 +591,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 		switch( $SubAction ) {
 			case 'getdata':
 				$sql = $wpdb->prepare("SELECT document_uri, useragent, count(*) as numerrors ".
-									" FROM " . wpCSPclass::LogTableName() .
+									" FROM " . WP_CSP::LogTableName() .
 									" WHERE violated_directive = %s" .
 									" AND blocked_uri = %s " .
 									" GROUP BY document_uri, useragent",
@@ -576,12 +625,12 @@ class wpCSPAdmin extends WP_REST_Controller{
 					}
 				}
 				$BlockedURI = str_replace("\'","'",$BlockedURI);
-				$options = get_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS );
+				$options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
 				$selected = !empty( $options[ $ViolatedDirective ] ) ? $options[ $ViolatedDirective ] : '' ;
 				$selected .= " " . $BlockedURI ;
-                $options[ $ViolatedDirective ] = implode(" ", wpCSPclass::CleanPolicyOptionText( $selected ) ) ;
+                $options[ $ViolatedDirective ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) ) ;
 
-				$options = update_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS , $options );
+				$options = update_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS , $options );
 				$HTML = 'Successfully added <strong>'.esc_html( $BlockedURI ) .'</strong> to the <strong>' . strtoupper($ViolatedDirective) . '</strong> domains list';
 				break ;
 			case 'addIgnoreDomain':
@@ -602,12 +651,12 @@ class wpCSPAdmin extends WP_REST_Controller{
 						}
 					}
 				}
-				$options = get_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS );
-				$selected = !empty( $options[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '' ;
+				$options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
+				$selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '' ;
 				$selected .= " " . $BlockedURI ;
-                $options[ wpCSPclass::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] = implode(" ", wpCSPclass::CleanPolicyOptionText( $selected ) ) ;
+                $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) ) ;
 
-				$options = update_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS , $options );
+				$options = update_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS , $options );
 				$HTML = 'Successfully added <strong>'.$BlockedURI.'</strong> to the <strong>IGNORED</strong> domains list';
 				break ;
 			case 'clearLogFile':
@@ -648,13 +697,13 @@ class wpCSPAdmin extends WP_REST_Controller{
 	 */
 	public static function plugin_uninstall() {
 		global $wpdb; 
-		$wpdb->query( "DROP TABLE IF EXISTS " . wpCSPclass::LogTableName( ) );
+		$wpdb->query( "DROP TABLE IF EXISTS " . WP_CSP::LogTableName( ) );
 		
-		unregister_setting( wpCSPclass::SETTINGS_OPTIONS_SECTION,  // settings section
-							wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS // setting name
+		unregister_setting( WP_CSP::SETTINGS_OPTIONS_SECTION,  // settings section
+							WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS // setting name
 		);
 		delete_option( self::wpCSPDBVersionOptionName  );
-		delete_option( wpCSPclass::SETTINGS_OPTIONS_ALLOPTIONS  );
+		delete_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS  );
 		
 		wp_clear_scheduled_hook( self::wpCSPDBCronJobName );
 	}
@@ -679,12 +728,22 @@ class wpCSPAdmin extends WP_REST_Controller{
 				if ( $StrippedPolicy == 'unsafeeval' && $Policy != "'unsafe-eval'") {
 					$return[] = "Entry for <strong>unsafe-eval</strong> should read <strong>'unsafe-eval'</strong> (with single quotes) - Policy: " .$Policy ; 
 				}
+				if ( $StrippedPolicy == 'unsafehashedattributes' && $Policy != "'unsafe-hashed-attributes'") {
+					$return[] = "Entry for <strong>unsafe-hashed-attributes</strong> should read <strong>'unsafe-hashed-attributes'</strong> (with single quotes) - Policy: " .$Policy ;
+				}
 				if ( $StrippedPolicy == 'none' && $Policy != "'none'") {
 					$return[] = "Entry for <strong>none</strong> should read <strong>'none'</strong> (with single quotes) - Policy: " .$Policy ; 
 				}
 				if ( $StrippedPolicy == 'strict-dynamic' && $Policy != "'strict-dynamic'") {
 					$return[] = "Entry for <strong>strict-dynamic</strong> should read <strong>'strict-dynamic'</strong> (with single quotes) - Policy: " .$Policy ;
 				}
+				if ( substr( $StrippedPolicy ,0,4) == 'sha-' && ( substr( $Policy,0,1) != "'" || substr( $Policy,-1) != "'"  ) ) {
+					$return[] = "Entry for <strong>$Policy</strong> should start and end with single quotes - Policy: " .$Policy ;
+				}
+				if ( substr( $StrippedPolicy ,0,6) == 'nonce-' ) {
+					$return[] = "Entry for <strong>'nonce-'</strong> should not exist - remove - Policy: " .$Policy ;
+				}
+					
 				foreach( $SchemeTags as $SchemeTag ) {
 					if ( $StrippedPolicy == $SchemeTag && $Policy != $SchemeTag . ":") {
 						$return[] = "Entry for <strong>".$SchemeTag.":</strong> should read <strong>".$SchemeTag.":</strong> (with ending colon) - Policy: " .$Policy ; 
@@ -847,7 +906,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 		
 		foreach( $TestArray as $Test ) {
 			$return[] =  "------------ Starting test:" . print_r( $Test,true) ;
-			$ret = wpCSPclass::IsURIInOptionString( $Test[0], $Test[1] ) ;
+			$ret = WP_CSP::IsURIInOptionString( $Test[0], $Test[1] ) ;
 			if ( $ret !== $Test[2] ) {
 				$return[] =  "****** failed test:" . print_r( $Test,true);
 				$return[] =  "returned:" . print_r( $ret , true );
@@ -859,7 +918,7 @@ class wpCSPAdmin extends WP_REST_Controller{
 		// Test end to end including logging.
 		$CSPViolation = array( 'csp-report' => array( 'effective-directive' => 'img-src' ,
 				'blocked-uri' => 'http://b.wallyworld.zzzz' ) ) ;
-		if ( wpCSPclass::ProcessPolicyViolation( $CSPViolation ) === false ) {
+		if ( WP_CSP::ProcessPolicyViolation( $CSPViolation ) === false ) {
 			$return[] =  "Should be logging b.wallyworld.zzzz as it is not blocked by ignored urls<br>\n ;" ;
 		}
 		
@@ -869,11 +928,12 @@ class wpCSPAdmin extends WP_REST_Controller{
 	}
 }
 
-add_action('init',array("wpCSPAdmin","init"));
+$WP_CSP_Admin = new WP_CSP_Admin() ;
+add_action('init',array( $WP_CSP_Admin ,"init"));
 // If action "rest_api_init" hasn't run yet then use that, otherwise we have the route server in place, just register route
 if ( did_action('rest_api_init') == 0 ){
-	add_action('rest_api_init',array("wpCSPAdmin","register_routes"));
+	add_action('rest_api_init',array( $WP_CSP_Admin,"register_routes"));
 }
 else {
-	wpCSPAdmin::register_routes();
+	$WP_CSP_Admin->register_routes();
 }
