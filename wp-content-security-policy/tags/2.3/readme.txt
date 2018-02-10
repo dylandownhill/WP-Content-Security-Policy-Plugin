@@ -5,7 +5,7 @@ Tags: content security policy, csp
 Requires WP: 4.8
 Tested up to: 4.9.4
 Requires PHP: 5.3
-Stable tag: 2.2
+Stable tag: 2.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 GitHub Plugin URI: https://github.com/dylandownhill/WP-Content-Security-Policy-Plugin
