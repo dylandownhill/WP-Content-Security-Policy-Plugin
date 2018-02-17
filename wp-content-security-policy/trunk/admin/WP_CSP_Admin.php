@@ -11,6 +11,8 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	const wpCSPDBVersionOptionName = 'wpcsp-dbVersion';
 	const wpCSPDBVersion = '1.2';
 	const wpCSPDBCronJobName = 'wpcsp-DBDailyMaintenance';
+	const WPCSP_PAGE_SLUG_LOG = 'wpcsp_log' ;
+	const WPCSP_PAGE_SLUG_OPTIONS = 'wpcsp_options' ;
 
 	/**
 	 * Check the user can access the function.
@@ -106,23 +108,29 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		register_uninstall_hook(__FILE__, array(__CLASS__,"plugin_uninstall") );
 	}
 
-
-	public static function add_styles_and_scripts() {
-		wp_register_script( 'WP_CSP_Admin', plugins_url( '../js/WP_CSP_Admin.js', __FILE__ ), array( 'jquery' ),false,true );
-		wp_enqueue_script('jquery-ui-core', array( 'jquery' ));
-		wp_enqueue_script('jquery-ui-tabs', array( 'jquery-ui-core' ));
-		wp_enqueue_style('WP_CSP_Admin', plugins_url( '../css/WP_CSP_Admin.css', __FILE__ ) );
-		wp_enqueue_style( 'jquery-ui', '//ajax.googleapis.com/ajax/libs/jqueryui/1.8.1/themes/base/jquery-ui.css');
-
-
-		wp_enqueue_script( 'WP_CSP_Admin' );
-
-		$Data = array(
-				'restAdminURL' => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
-				'restAdminNonce' => wp_create_nonce( "wp_rest" ),
-		) ;
-
-		wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $Data );
+	/**
+	 * Add scripts and styles but only if displaying the CSP admin pages.
+	 * @param string $hook
+	 */
+	public static function add_styles_and_scripts( $hook ) {
+		// Check we are displaying the CSP admin page.
+		if ( "settings_page_". WP_CSP_Admin::WPCSP_PAGE_SLUG_LOG == $hook || "settings_page_". WP_CSP_Admin::WPCSP_PAGE_SLUG_OPTIONS == $hook ) {
+		
+			wp_register_script( 'WP_CSP_Admin', plugins_url( '../js/WP_CSP_Admin.js', __FILE__ ), array( 'jquery' ),false,true );
+			wp_enqueue_script('jquery-ui-core', array( 'jquery' ));
+			wp_enqueue_script('jquery-ui-tabs', array( 'jquery-ui-core' ));
+			wp_enqueue_style('WP_CSP_Admin', plugins_url( '../css/WP_CSP_Admin.css', __FILE__ ) );
+			wp_enqueue_style( 'jquery-ui', '//ajax.googleapis.com/ajax/libs/jqueryui/1.8.1/themes/base/jquery-ui.css');
+	
+			wp_enqueue_script( 'WP_CSP_Admin' );
+	
+			$Data = array(
+					'restAdminURL' => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
+					'restAdminNonce' => wp_create_nonce( "wp_rest" ),
+			) ;
+	
+			wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $Data );
+		}
 	}
 
 	/**
@@ -134,7 +142,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				__( 'WP Content Security Policy', 'wpcsp' ), // page title
 				__( 'CSP Options', 'wpcsp' ), // menu title
 				'manage_options',               // capability required to see the page
-				'wpcsp_options',                // admin page slug, e.g. options-general.php?page=wporg_options
+				WP_CSP_Admin::WPCSP_PAGE_SLUG_OPTIONS,                // admin page slug, e.g. options-general.php?page=wporg_options
 				array( __CLASS__, 'options_page')            // callback function to display the options page
 				);
 		add_submenu_page(
@@ -142,7 +150,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				__( 'WP Content Security Policy Log', 'wpcsp' ), // page title
 				__( 'CSP Log', 'wpcsp' ), // menu title
 				'manage_options',               // capability required to see the page
-				'wpcsp_log',                // admin page slug, e.g. options-general.php?page=wporg_options
+				WP_CSP_Admin::WPCSP_PAGE_SLUG_LOG,                // admin page slug, e.g. options-general.php?page=wporg_options
 				array( __CLASS__, 'log_page')            // callback function to display the options page
 				);
 	}
@@ -548,7 +556,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	}
 
 	/**
-	 * Cldar log file.
+	 * Clear log file.
 	 */
 	private static function ClearLogFile() {
 		global $wpdb;
@@ -558,7 +566,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 
 
 	/**
-	 * Register the settings
+	 * Register the settings - part of admin_init hook
 	 */
 	public static function register_settings() {
 		register_setting( WP_CSP::SETTINGS_OPTIONS_SECTION,  // settings section

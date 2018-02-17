@@ -361,7 +361,8 @@ class WP_CSP extends WP_REST_Controller{
 		// Work out the content security policy settings.
 		$CSPOutput = array() ;
 		foreach( WP_CSP::$CSP_Policies as $PolicyKey => $CSPPolicy) {
-			$CSPOptions = self::CleanPolicyOptionText( $options[$PolicyKey] );
+			$DirtyOptionText = !empty( $options[$PolicyKey] ) ? $options[$PolicyKey] : '' ;
+			$CSPOptions = self::CleanPolicyOptionText( $DirtyOptionText );
 			// If self is listed, add the current site name to the CSP too as some browsers need it.
 			if ( in_array( "'self'", $CSPOptions)) {
 				$CSPOptions[] = site_url();
