@@ -299,23 +299,23 @@ class WP_CSP_Admin extends WP_REST_Controller {
 						<li><a href="#wpcsp_tabsAdmin_Test">Test</a></li>
 					</ul>
 					<div id='wpcsp_tabsAdmin_Control'>
-						<?php include('part-cspcontrol.php'); ?>
-						<?php include('part-cspsavechanges.php'); ?>
+						<?php include 'partials/part-cspcontrol.php'; ?>
+						<?php include 'partials/part-cspsavechanges.php'; ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_CSP'>
-						<?php include('part-cspoptions.php'); ?>
-						<?php include('part-cspsavechanges.php'); ?>
+						<?php include 'partials/part-cspoptions.php'; ?>
+						<?php include 'partials/part-cspsavechanges.php'; ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_Headers'>
-						<?php include('part-cspheaders.php'); ?>
-						<?php include('part-cspsavechanges.php'); ?>
+						<?php include 'partials/part-cspheaders.php'; ?>
+						<?php include 'partials/part-cspsavechanges.php'; ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_V3'>
-						<?php include('part-cspv3.php'); ?>
-						<?php include('part-cspsavechanges.php'); ?>
+						<?php include 'partials/part-cspv3.php'; ?>
+						<?php include 'partials/part-cspsavechanges.php'; ?>
 					</div>
 					<div id='wpcsp_tabsAdmin_Test'>
-						<?php include('part-csptest.php'); ?>
+						<?php include 'partials/part-csptest.php'; ?>
 					</div>
 	          </div>
 			</form>
