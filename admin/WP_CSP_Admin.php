@@ -145,20 +145,15 @@ class WP_CSP_Admin extends WP_REST_Controller {
 			// Set up resource file suffix.
 			$suffix = SCRIPT_DEBUG ? '' : '.min';
 
-			wp_register_script( 'WP_CSP_Admin', plugins_url( "js/WP_CSP_Admin$suffix.js", __FILE__ ), array( 'jquery' ),false,true );
-			wp_enqueue_script( 'jquery-ui-core', array( 'jquery' ) );
-			wp_enqueue_script( 'jquery-ui-tabs', array( 'jquery-ui-core' ) );
+			wp_enqueue_script( 'WP_CSP_Admin', plugins_url( "js/WP_CSP_Admin$suffix.js", __FILE__ ), array( 'jquery', 'jquery-ui-tabs' ),false,true );
 			wp_enqueue_style( 'WP_CSP_Admin', plugins_url( "css/WP_CSP_Admin$min.css", __FILE__ ) );
-			wp_enqueue_style( 'jquery-ui', '//ajax.googleapis.com/ajax/libs/jqueryui/1.8.1/themes/base/jquery-ui.css');
 
-			wp_enqueue_script( 'WP_CSP_Admin' );
-
-			$Data = array(
+			$data = array(
 				'restAdminURL'   => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
 				'restAdminNonce' => wp_create_nonce( "wp_rest" ),
 			);
 
-			wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $Data );
+			wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $data );
 		}
 	}
 
