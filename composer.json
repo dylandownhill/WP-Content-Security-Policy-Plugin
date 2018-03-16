@@ -1,0 +1,39 @@
+{
+    "name": "dylandownhill/wp-content-security-policy",
+    "description": "Block XSS vulnerabilities by adding a Content Security Policy header, plugin receives violations to easily maintain the security policy.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Dylan Downhill",
+            "role": "Developer"
+        }
+    ],
+
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "3.2.2",
+        "wp-coding-standards/wpcs": "^0.14.0",
+        "wimg/php-compatibility": "^8.0",
+        "dealerdirect/phpcodesniffer-composer-installer": "^0.4"
+    },
+
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+
+    "autoload-dev": {
+        "classmap": ["admin/", "includes/"]
+    },
+
+    "config": {
+        "classmap-authoritative": false
+    },
+
+    "scripts": {
+      "phpcs": [
+          "phpcs -p -s includes/ admin/ --extensions=php"
+      ]
+    }
+}

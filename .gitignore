@@ -1,2 +1,24 @@
-/.svn/
-/.metadata/
+# tmp files
+*~
+
+# Composer
+vendor/*
+composer.lock
+
+# Node.js/Grunt
+node_modules/*
+
+# build dir
+build/*
+
+# SASS
+.sass-cache/*
+
+# ignore generated code coverage files
+tests/coverage/*
+
+# ignore dummy PHP file for language names
+includes/_language_names.php
+
+# macOS Finder
+.DS_Store
