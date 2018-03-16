@@ -1,25 +1,53 @@
-<?php 
+<?php
+/**
+ *  This file is part of WP Content Security Plugin.
+ *
+ *  Copyright 2015-2018 Dylan Downhill
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *  ***
+ *
+ *  @package dylandownhill/wp-content-security-policy
+ *  @license http://www.gnu.org/licenses/gpl-2.0.html
+ */
+
 global $options;
 ?>
 <table class="wpcsp-form-table">
 	<tr class='wpcsp_option_row'>
-		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>"><?php _e( "CSP Mode", 'wpcsp' ); ?></label></th>
+		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>"><?php _e( 'CSP Mode', 'wpcsp' ); ?></label></th>
 		<td class='wpcsp_option_cell'>
-			<select name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS;?>[<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>">
-			<?php $selected = isset( $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ]  : WP_CSP::CSP_MODE_DEFAULT; ?>
-			<option value="<?php echo WP_CSP::CSP_NOTINUSE ; ?>" <?php selected( $selected, WP_CSP::CSP_NOTINUSE); ?> >Not in use</option>
-			<option value="<?php echo WP_CSP::CSP_ENABLED_ENFORCE; ?>" <?php selected( $selected, WP_CSP::CSP_ENABLED_ENFORCE); ?> >Enforce policies</option>
+			<select name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS; ?>[<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_CSP_MODE; ?>">
+			<?php $selected = isset( $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] : WP_CSP::CSP_MODE_DEFAULT; ?>
+			<option value="<?php echo WP_CSP::CSP_NOTINUSE; ?>" <?php selected( $selected, WP_CSP::CSP_NOTINUSE ); ?> >Not in use</option>
+			<option value="<?php echo WP_CSP::CSP_ENABLED_ENFORCE; ?>" <?php selected( $selected, WP_CSP::CSP_ENABLED_ENFORCE ); ?> >Enforce policies</option>
 			<option value="<?php echo WP_CSP::CSP_ENABLED_REPORTONLY; ?>" <?php selected( $selected, WP_CSP::CSP_ENABLED_REPORTONLY ); ?> >Report only - do not enforce policies</option>
 			</select>
 			<div class='wpcsp_option_description'><?php _e( 'Toggles whether or not to run in report only mode or cause the browsers to enforce the security policy.', 'wpcsp' ); ?></div>
-			<?php if ( !empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE])) :?><div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE];?></div><?php endif; ?>
+			<?php
+			if ( ! empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ) :
+ ?>
+ <div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ]; ?></div><?php endif; ?>
 		</td>
 	</tr>
 	<tr class='wpcsp_option_row'>
-		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( "Log violations", 'wpcsp' ); ?></label></th>
+		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( 'Log violations', 'wpcsp' ); ?></label></th>
 		<td class='wpcsp_option_cell'>
-			<select name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS;?>[<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>">
-				<?php $selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS] : '' ; ?>
+			<select name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS; ?>[<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>">
+				<?php $selected = ! empty( $options[ WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS ] : ''; ?>
 				<option value="<?php echo WP_CSP::LOGVIOLATIONS_IGNORE; ?>" <?php selected( $selected, WP_CSP::LOGVIOLATIONS_IGNORE ); ?> >No, ignore</option>
 				<option value="<?php echo WP_CSP::LOGVIOLATIONS_LOG_ALL; ?>" <?php selected( $selected, WP_CSP::LOGVIOLATIONS_LOG_ALL ); ?> >Yes, log all</option>
 				<option value="<?php echo WP_CSP::LOGVIOLATIONS_LOG_10PERC; ?>" <?php selected( $selected, WP_CSP::LOGVIOLATIONS_LOG_10PERC ); ?> >Yes, log for 10% of page loads</option>
@@ -30,23 +58,29 @@ global $options;
 		</td>
 	</tr>
 	<tr class='wpcsp_option_row'>
-		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( "ReportURI - Report Only", 'wpcsp' ); ?></label></th>
+		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( 'ReportURI - Report Only', 'wpcsp' ); ?></label></th>
 		<td class='wpcsp_option_cell'>
-			<?php $selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] : '' ; ?>
-			<input name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS;?>[<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY; ?>"
-				type='text' value='<?php echo esc_attr($selected);?>' size='80' maxlength='255' />
+			<?php $selected = ! empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ] : ''; ?>
+			<input name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS; ?>[<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY; ?>"
+				type='text' value='<?php echo esc_attr( $selected ); ?>' size='80' maxlength='255' />
 			<div class='wpcsp_option_description'><?php _e( "Leave blank to report violations to this server of fill in the URL of the server to receive your reports i.e. <a href='https://report-uri.com/'>https://report-uri.com/</a>", 'wpcsp' ); ?></div>
-			<?php if ( !empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY])) :?><div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI ];?></div><?php endif; ?>
+			<?php
+			if ( ! empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ] ) ) :
+ ?>
+ <div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI ]; ?></div><?php endif; ?>
 		</td>
 	</tr>
 	<tr class='wpcsp_option_row'>
-		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( "ReportURI - Enforce", 'wpcsp' ); ?></label></th>
+		<th scope="row"><label for="<?php echo WP_CSP::SETTINGS_OPTIONS_LOGVIOLATIONS; ?>"><?php _e( 'ReportURI - Enforce', 'wpcsp' ); ?></label></th>
 		<td class='wpcsp_option_cell'>
-			<?php $selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] : '' ; ?>
-			<input name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS;?>[<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE; ?>"
-				type='text' value='<?php echo esc_attr($selected);?>' size='80' maxlength='255' />
+			<?php $selected = ! empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE ] : ''; ?>
+			<input name="<?php echo WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS; ?>[<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE; ?>]" id="<?php echo WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE; ?>"
+				type='text' value='<?php echo esc_attr( $selected ); ?>' size='80' maxlength='255' />
 			<div class='wpcsp_option_description'><?php _e( "Leave blank to report violations to this server of fill in the URL of the server to receive your reports i.e. <a href='https://report-uri.com/'>https://report-uri.com/</a>", 'wpcsp' ); ?></div>
-			<?php if ( !empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE])) :?><div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE];?></div><?php endif; ?>
+			<?php
+			if ( ! empty( $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE ] ) ) :
+ ?>
+ <div class='wpcsp_option_errors'><?php echo $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE ]; ?></div><?php endif; ?>
 		</td>
 	</tr>
 </table>

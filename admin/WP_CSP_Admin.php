@@ -1,26 +1,52 @@
 <?php
-if(!empty($_SERVER['SCRIPT_FILENAME']) && basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])){
+/**
+ *  This file is part of WP Content Security Plugin.
+ *
+ *  Copyright 2015-2018 Dylan Downhill
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *  ***
+ *
+ *  @package dylandownhill/wp-content-security-policy
+ *  @license http://www.gnu.org/licenses/gpl-2.0.html
+ */
+
+if ( ! empty($_SERVER['SCRIPT_FILENAME'] ) && basename( __FILE__ ) === basename($_SERVER['SCRIPT_FILENAME'] ) ) {
 	die('You can not access this page directly!');
 }
 
-class WP_CSP_Admin extends WP_REST_Controller{
+class WP_CSP_Admin extends WP_REST_Controller {
 
 	/**
 	 * Nearly all the constants are in the WP_CSP class, because that class needs a bunch of the settings, but not access to WP_CSP_Admin
 	 */
-	const wpCSPDBVersionOptionName = 'wpcsp-dbVersion';
-	const wpCSPDBVersion = '1.2';
-	const wpCSPDBCronJobName = 'wpcsp-DBDailyMaintenance';
-	const WPCSP_PAGE_SLUG_LOG = 'wpcsp_log' ;
-	const WPCSP_PAGE_SLUG_OPTIONS = 'wpcsp_options' ;
+	const WPCSP_DB_VERSION_OPTION_NAME = 'wpcsp-dbVersion';
+	const WPCSP_DB_VERSION             = '1.2';
+	const WPCSP_DB_CRON_JOB_NAME       = 'wpcsp-DBDailyMaintenance';
+	const WPCSP_PAGE_SLUG_LOG          = 'wpcsp_log';
+	const WPCSP_PAGE_SLUG_OPTIONS      = 'wpcsp_options';
 
 	/**
 	 * Check the user can access the function.
 	 *
-	 * @param  WP_REST_Request  $request The current request object.
+	 * @param  WP_REST_Request $request The current request object.
+	 *
 	 * @return WP_Error|boolean
 	 */
-	public static function permissions_check_edit_posts(  $request  ) {
+	public static function permissions_check_edit_posts( $request ) {
 		return current_user_can( 'edit_posts' );
 	}
 
@@ -28,9 +54,10 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	/**
 	 * Sanitize a request argument based on details registered to the route.
 	 *
-	 * @param  mixed            $value   Value of the &#039;filter&#039; argument.
-	 * @param  WP_REST_Request  $request The current request object.
-	 * @param  string           $param   Key of the parameter. In this case it is &#039;filter&#039;.
+	 * @param  mixed           $value   Value of the &#039;filter&#039; argument.
+	 * @param  WP_REST_Request $request The current request object.
+	 * @param  string          $param   Key of the parameter. In this case it is &#039;filter&#039;.
+	 *
 	 * @return WP_Error|boolean
 	 */
 	public static function data_arg_sanitize_string_callback( $value, $request, $param ) {
@@ -98,12 +125,12 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	 * register the hooks and other initialization routines.
 	 */
 	public static function init() {
-		add_action( 'admin_menu', array( __CLASS__, 'add_options_submenu_page'));
-		add_action( 'admin_init', array( __CLASS__, 'register_settings'));
+		add_action( 'admin_menu', array( __CLASS__, 'add_options_submenu_page') );
+		add_action( 'admin_init', array( __CLASS__, 'register_settings') );
 		add_action( 'admin_enqueue_scripts', array(__CLASS__,'add_styles_and_scripts')  );
 
 		add_action( 'plugins_loaded', array(__CLASS__,'update_database') );
-		add_action( self::wpCSPDBCronJobName,  array(__CLASS__,'daily_maintenance')  );
+		add_action( self::WPCSP_DB_CRON_JOB_NAME,  array(__CLASS__,'daily_maintenance')  );
 
 		register_uninstall_hook(__FILE__, array(__CLASS__,"plugin_uninstall") );
 	}
@@ -115,20 +142,20 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	public static function add_styles_and_scripts( $hook ) {
 		// Check we are displaying the CSP admin page.
 		if ( "settings_page_". WP_CSP_Admin::WPCSP_PAGE_SLUG_LOG == $hook || "settings_page_". WP_CSP_Admin::WPCSP_PAGE_SLUG_OPTIONS == $hook ) {
-		
+
 			wp_register_script( 'WP_CSP_Admin', plugins_url( '../js/WP_CSP_Admin.js', __FILE__ ), array( 'jquery' ),false,true );
-			wp_enqueue_script('jquery-ui-core', array( 'jquery' ));
-			wp_enqueue_script('jquery-ui-tabs', array( 'jquery-ui-core' ));
+			wp_enqueue_script('jquery-ui-core', array( 'jquery' ) );
+			wp_enqueue_script('jquery-ui-tabs', array( 'jquery-ui-core' ) );
 			wp_enqueue_style('WP_CSP_Admin', plugins_url( '../css/WP_CSP_Admin.css', __FILE__ ) );
 			wp_enqueue_style( 'jquery-ui', '//ajax.googleapis.com/ajax/libs/jqueryui/1.8.1/themes/base/jquery-ui.css');
-	
+
 			wp_enqueue_script( 'WP_CSP_Admin' );
-	
+
 			$Data = array(
 					'restAdminURL' => get_rest_url( null, WP_CSP::ROUTE_NAMESPACE . "/" . WP_CSP::ROUTE_BASE . "/RestAdmin" ) ,
 					'restAdminNonce' => wp_create_nonce( "wp_rest" ),
-			) ;
-	
+			);
+
 			wp_localize_script( 'WP_CSP_Admin', 'WPCSP', $Data );
 		}
 	}
@@ -163,74 +190,74 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	 */
 	public static function options_page() {
 		// Make sure the database table exists.
-		self::update_database() ;
+		self::update_database();
 		global $options;
 		global $PolicyKeyErrors, $PolicyKeyWarnings;
 	    $options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
 
 	    // Go through the options looking for errors.
-	    $PolicyKeyErrors = array() ;
-	    $ErrorOutput = array() ;
-	    $WarningOutput = array() ;
+	    $PolicyKeyErrors = array();
+	    $ErrorOutput     = array();
+	    $WarningOutput   = array();
 		foreach( WP_CSP::$CSP_Policies as $PolicyKey => $CSPPolicy) :
-			$selected = !empty( $options[ $PolicyKey ] ) ? $options[ $PolicyKey ] : '' ;
-			$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected ) ;
-			$Errors = self::FindCSPErrors( $PolicyKey, $CSPOptions );
-			if ( !empty( $Errors )) {
+			$selected   = !empty( $options[ $PolicyKey ] ) ? $options[ $PolicyKey ] : '';
+			$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected );
+			$Errors     = self::FindCSPErrors( $PolicyKey, $CSPOptions );
+			if ( ! empty( $Errors ) ) {
 				$PolicyKeyErrors[ $PolicyKey ] = "<ul><li>". implode("</li><li>",$Errors) . "</li></ul>";
-				$ErrorOutput[] = "<tr><td><a href='#anchor". $PolicyKey ."'>".$PolicyKey."</a></td><td>".$PolicyKeyErrors[ $PolicyKey ]."</td></tr>" ;
+				$ErrorOutput[]                 = "<tr><td><a href='#anchor". $PolicyKey ."'>" . $PolicyKey."</a></td><td>" . $PolicyKeyErrors[ $PolicyKey ] . "</td></tr>";
 			}
 		endforeach;
 
 		$selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '';
-		$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected ) ;
+		$CSPOptions = WP_CSP::CleanPolicyOptionText( $selected );
 		$Errors = self::FindCSPErrors( 'URLSToIgnore', $CSPOptions );
-		if ( !empty( $Errors )) {
+		if ( !empty( $Errors ) ) {
 			$PolicyKeyErrors[ 'URLSToIgnore'] = "<ul><li>". implode("</li><li>",$Errors) . "</li></ul>";
-			$ErrorOutput[] = "<tr><td><a href='#anchor". $PolicyKey ."'>".$PolicyKey."</a></td><td>".$PolicyKeyErrors[ 'URLSToIgnore' ]."</td></tr>" ;
+			$ErrorOutput[] = "<tr><td><a href='#anchor". $PolicyKey ."'>" . $PolicyKey."</a></td><td>" . $PolicyKeyErrors[ 'URLSToIgnore' ] . "</td></tr>";
 		}
 
 		if ( !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ) ) {
-			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] ;
-			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL)) {
+			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY];
+			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL) ) {
 				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY] = "REPORT-URI url invalid: $ReportURI";
-				$ErrorOutput[] = "<tr><td>REPORT-URI - Report Only</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ]."</td></tr>" ;
+				$ErrorOutput[] = "<tr><td>REPORT-URI - Report Only</td><td>" . $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_REPORTONLY ] . "</td></tr>";
 			}
 		}
 		if ( !empty( $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ) ) {
-			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] ;
-			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL)) {
+			$ReportURI = $options[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE];
+			if ( !filter_var($ReportURI, FILTER_VALIDATE_URL) ) {
 				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] = "REPORT-URI url invalid: $ReportURI";
-				$ErrorOutput[] = "<tr><td>REPORT-URI - Enforce</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE]."</td></tr>" ;
+				$ErrorOutput[] = "<tr><td>REPORT-URI - Enforce</td><td>" . $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_REPORT_URI_ENFORCE] . "</td></tr>";
 			}
 		}
 
 		if ( isset( $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS] ) && 3 == $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS] ) {
-			$AllowFromURL = $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] ;
-			if ( !filter_var($AllowFromURL, FILTER_VALIDATE_URL)) {
+			$AllowFromURL = $options[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ];
+			if ( !filter_var($AllowFromURL, FILTER_VALIDATE_URL) ) {
 				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] = "ALLOW-FROM url invalid: $AllowFromURL";
-				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ]."</td></tr>" ;
+				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>" . $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_FRAME_OPTIONS_ALLOW_FROM ] . "</td></tr>";
 			}
 		}
 
 		// Is CSP turned on?
 		$selected = isset( $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] : WP_CSP::CSP_MODE_DEFAULT;
-		if ( $selected == '' || $selected == WP_CSP::CSP_NOTINUSE ){
+		if ( $selected == '' || $selected == WP_CSP::CSP_NOTINUSE ) {
 
 			$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE ] = "CSP is currently turned off";
-			$ErrorOutput[] = "<tr><td>CSP Mode</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE]."</td></tr>" ;
+			$ErrorOutput[] = "<tr><td>CSP Mode</td><td>" . $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_CSP_MODE] . "</td></tr>";
 		}
 
 		// Check HSTS preload setting
 		if ( isset( $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) && WP_CSP::HSTS_SUBDOMAINS_AND_PRELOAD == $options[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS ] ) {
-			$HSTS_ExpirySeconds = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] : '' ;
+			$HSTS_ExpirySeconds = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_STS_MAXAGE] : '';
 			if ( $HSTS_ExpirySeconds < YEAR_IN_SECONDS ) {
 				$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "HSTS set to &quot;preload mode&quot; but the STS max age not a year";
-				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>".$PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+				$ErrorOutput[] = "<tr><td>X-Frame-Options</td><td>" . $PolicyKeyErrors[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] . "</td></tr>";
 			}
 			else {
 				$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] = "Strict Transport Security set to &quot;preload mode&quot;";
-				$WarningOutput[] = "<tr><td>HSTS Preload</td><td>".$PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS]."</td></tr>" ;
+				$WarningOutput[] = "<tr><td>HSTS Preload</td><td>" . $PolicyKeyWarnings[ WP_CSP::SETTINGS_OPTIONS_STS_OPTIONS] . "</td></tr>";
 			}
 		}
 		?>
@@ -243,19 +270,19 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				<div class="updated fade"><p><strong><?php _e( 'Content Security Policy Options saved!', 'wpcsp' ); ?></strong></p></div>
 			<?php endif; ?>
 
-			<?php if ( !empty( $ErrorOutput )): ?>
+			<?php if ( !empty( $ErrorOutput ) ): ?>
 				<div class="updated fade">
 					<table class='wpcsp_option_errors'>
 						<thead><tr><td colspan='2'>Errors found in configuration:</td></tr></thead>
-						<tbody><?php echo implode("",$ErrorOutput);?></tbody>
+						<tbody><?php echo implode("",$ErrorOutput); ?></tbody>
 					</table>
 				</div>
 			<?php endif; ?>
-			<?php if ( !empty( $WarningOutput)): ?>
+			<?php if ( !empty( $WarningOutput) ): ?>
 				<div class="updated fade">
 					<table class='wpcsp_option_warnings'>
 						<thead><tr><td colspan='2'>Warnings found in configuration: (not errors - just check you meant to set these)</td></tr></thead>
-						<tbody><?php echo implode("",$WarningOutput);?></tbody>
+						<tbody><?php echo implode("",$WarningOutput); ?></tbody>
 					</table>
 				</div>
 			<?php endif; ?>
@@ -304,7 +331,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	public static function log_page() {
 		global $wpdb;
 		// Make sure the database table exists.
-		self::update_database() ;
+		self::update_database();
 
 		// Options as entered by the site admin.
 		$CSPOptions = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
@@ -312,18 +339,18 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		// Get some display information for the user.
 		$LogTableName = WP_CSP::LogTableName();
 		$SinceDate = $wpdb->get_var( "select min( CreatedOn ) from " . $LogTableName );
-		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from ".$LogTableName." WHERE violated_directive <> '' AND blocked_uri <> '' group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
-		$Counter = 0 ;
-		$TargetHeaderID = "WPCSPTargetRow" . $Counter++ ;
+		$rows = $wpdb->get_results( "select violated_directive, blocked_uri, count( * ) as numerrors from " . $LogTableName." WHERE violated_directive <> '' AND blocked_uri <> '' group by violated_directive,blocked_uri order by numerrors DESC limit 100" );
+		$Counter = 0;
+		$TargetHeaderID = "WPCSPTargetRow" . $Counter++;
 		?>
 	     <div class="wrap">
 	     	<div class="wpcsp-WP_CSP_Admin wpcsp-logadmin">
 
 		          <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-		          <p data-target='#<?php echo $TargetHeaderID;?>'>Errors received since <?php echo $SinceDate; ?>.
-		          		<input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e('Clear Log File','wpcsp') ?>" />
+		          <p data-target='#<?php echo $TargetHeaderID; ?>'>Errors received since <?php echo $SinceDate; ?>.
+		          		<input type="button" class="button-primary btnWPCSPClearLogFile" value="<?php _e( 'Clear Log File','wpcsp') ?>" />
 		          </p>
-		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetHeaderID ;?>'></p>
+		          <p class='pWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetHeaderID; ?>'></p>
 		          <table class='wpcsp-logoferrors'>
 	          <thead>
 	          	<tr><td class='tdWPCSPViolatedDirective'>Violated Directive</td>
@@ -334,52 +361,52 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	          <?php
 				foreach ($rows as $obj) :
 				// Check if we have ignored or allowed the URL since the violation was logged.
-					$IsURIIgnored = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ;
-					if ( !empty( $CSPOptions[ $obj->violated_directive ])){
-						$IsURIAllowed = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ $obj->violated_directive ] ) ;
+					$IsURIIgnored = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] );
+					if ( !empty( $CSPOptions[ $obj->violated_directive ]) ) {
+						$IsURIAllowed = WP_CSP::IsURIInOptionString( $obj->blocked_uri , $CSPOptions[ $obj->violated_directive ] );
 					}
 					else {
-						$IsURIAllowed = false ;
+						$IsURIAllowed = false;
 					}
 					// Don't display entries that we have already ignored or allowed.
 					if ( $IsURIIgnored || $IsURIAllowed ) {
 						continue;
 					}
 
-					$Counter++ ;
-					$TargetRow1ID = "WPCSPTargetRow1" . $Counter ;
-					$TargetRow2ID = "WPCSPTargetRow2" . $Counter ;
+					$Counter++;
+					$TargetRow1ID = "WPCSPTargetRow1" . $Counter;
+					$TargetRow2ID = "WPCSPTargetRow2" . $Counter;
 					?>
 					<tbody data-group="WPCSPViewError$Counter">
-						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive ;?>' data-blockeduri='<?php echo $obj->blocked_uri ;?>'>
-							<td class='tdWPCSPViolatedDirective'><?php echo $obj->violated_directive ;?></td>
-							<td class='tdWPCSPBlockedURL'><?php echo $obj->blocked_uri ;?></td>
-							<td class='tdWPCSPNumErrors'><?php echo $obj->numerrors ; ?></td>
-							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e('View Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
-								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e('Hide Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID ;?>' />
+						<tr class='trWPCSPViewErrorSummary' data-violateddirective='<?php echo $obj->violated_directive; ?>' data-blockeduri='<?php echo $obj->blocked_uri; ?>'>
+							<td class='tdWPCSPViolatedDirective'><?php echo $obj->violated_directive; ?></td>
+							<td class='tdWPCSPBlockedURL'><?php echo $obj->blocked_uri; ?></td>
+							<td class='tdWPCSPNumErrors'><?php echo $obj->numerrors; ?></td>
+							<td class='tdWPCSPActionButtons'><input type="button" class="button-primary btnWPCSPViewErrors" value="<?php _e( 'View Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID; ?>' />
+								<input type="button" class="button-primary btnWPCSPHideErrors WPCSPHiddenEntry" value="<?php _e( 'Hide Errors','wpcsp') ?>" data-target='#<?php echo $TargetRow1ID; ?>' />
 							</td>
 						</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1ID;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow1ID; ?>'><td colspan='4'></td></tr>
 						<?php
-						$URIParts = parse_url( $obj->blocked_uri  ) ;
-						if ( !empty( $URIParts['host'])):
-							$URIHostnameWildcard = '*' . substr( $URIParts['host'] , strpos($URIParts['host'],"." )) ;
+						$URIParts = parse_url( $obj->blocked_uri  );
+						if ( !empty( $URIParts['host']) ):
+							$URIHostnameWildcard = '*' . substr( $URIParts['host'] , strpos($URIParts['host'],"." ) );
 							if ( !empty( $URIParts['path'] )  ) {
-								if ( substr( $URIParts['path'] , -1 ) == '/'){
-									$URLPathDirectory = $URIParts['path'] ;
+								if ( substr( $URIParts['path'] , -1 ) == '/') {
+									$URLPathDirectory = $URIParts['path'];
 									$URLPathFile = '';
 								}
 								else {
-									$URLPathDirectory = substr( $URIParts['path'] , 0, strrpos($URIParts['path'],"/" ) +1) ;
-									$URLPathFile = substr( $URIParts['path'] , strrpos($URIParts['path'],"/" )+1) ;
+									$URLPathDirectory = substr( $URIParts['path'] , 0, strrpos($URIParts['path'],"/" ) +1);
+									$URLPathFile = substr( $URIParts['path'] , strrpos($URIParts['path'],"/" )+1);
 								}
 							}
 							else {
-								$URLPathDirectory = '' ;
-								$URLPathFile = '' ;
+								$URLPathDirectory = '';
+								$URLPathFile = '';
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive; ?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td><select class='WPCSPBlockedURLScheme'>
@@ -392,92 +419,92 @@ class WP_CSP_Admin extends WP_REST_Controller{
 			                            <option value="<?php echo $URIHostnameWildcard; ?>" ><?php echo $URIHostnameWildcard; ?></option>
 									</select></td>
 									<td>
-									<?php if ( empty( $URLPathDirectory )) : ?>
+									<?php if ( empty( $URLPathDirectory ) ) : ?>
 										<input type='hidden'  class='WPCSPBlockedURLPath' value='' />No Path
 									<?php else :?><select class='WPCSPBlockedURLPath'>
 			                            <option value="<?php echo $URLPathDirectory; ?>"><?php echo $URLPathDirectory; ?></option>
 			                            <option value="" selected='selected'>Any Path</option>
 									</select><div class='WPCSPBlockedURLPathError WPCSPHiddenEntry'></div>
-									<?php endif;?></td>
+									<?php endif; ?></td>
 									<td>
-									<?php if ( empty( $URLPathFile )) : ?>
+									<?php if ( empty( $URLPathFile ) ) : ?>
 										<input type='hidden'  class='WPCSPBlockedURLFile' value='' />No Filename
 									<?php else :?><select class='WPCSPBlockedURLFile'>
 			                            <option value="<?php echo $URLPathFile; ?>"><?php echo $URLPathFile; ?></option>
 			                            <option value="" selected='selected' >Any Filename</option>
 									</select><div class='WPCSPBlockedURLFileError WPCSPHiddenEntry'></div>
-									<?php endif;?></td>
+									<?php endif; ?></td>
 									</tr></table>
 								</td>
 								<td class='tdWPCSPActionButtons'>
-									<?php if ( isset( WP_CSP::$CSP_Policies[ $obj->violated_directive ] )) : ?>
-										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
+									<?php if ( isset( WP_CSP::$CSP_Policies[ $obj->violated_directive ] ) ) : ?>
+										<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e( 'Allow ' . strtoupper( $obj->violated_directive ) . ' Access', 'wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID; ?>' />
 									<?php else:?>
 										<div class='wpscp_Cannot_Allow'>No allow Option</div>
 									<?php endif; ?>
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID ;?>' />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e( 'Ignore Domain Violations','wpcsp') ?>"  data-target='#<?php echo $TargetRow2ID; ?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID; ?>'><td colspan='4'></td></tr>
 						<?php
 						elseif( ( !empty( $URIParts['path'] ) && in_array( $URIParts['path'], array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ||
 								( !empty( $obj->blocked_uri ) && in_array( $obj->blocked_uri, array('data','inline','eval','blob','mediastream','filesystem','self') ) ) ) :
 								switch( !empty( $URIParts['path']) ? $URIParts['path'] : $obj->blocked_uri ) {
 								case 'data':
-									$BlockRule = "data:" ;
-									break ;
+									$BlockRule = "data:";
+									break;
 								case 'blob':
-									$BlockRule = "blob:" ;
-									break ;
+									$BlockRule = "blob:";
+									break;
 								case 'mediastream':
-									$BlockRule = "mediastream:" ;
-									break ;
+									$BlockRule = "mediastream:";
+									break;
 								case 'filesystem':
-									$BlockRule = "filesystem:" ;
-									break ;
+									$BlockRule = "filesystem:";
+									break;
 								case 'inline':
-									$BlockRule = "'unsafe-inline'" ;
-									break ;
+									$BlockRule = "'unsafe-inline'";
+									break;
 								case 'eval':
-									$BlockRule = "'unsafe-eval'" ;
-									break ;
+									$BlockRule = "'unsafe-eval'";
+									break;
 								case 'self':
-									$BlockRule = "'self'" ;
-									break ;
+									$BlockRule = "'self'";
+									break;
 								default:
 									$BlockRule = "";
 									break;
 							}
 							?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive; ?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='3'>
 									<table><tr>
 									<td>&nbsp;</td>
 									<td>&nbsp;</td>
 									<td>
-										<input type='text'  class='WPCSPBlockedURLPath' value='<?php echo esc_attr( $BlockRule ) ; ?>' readonly='readonly' />
+										<input type='text'  class='WPCSPBlockedURLPath' value='<?php echo esc_attr( $BlockRule ); ?>' readonly='readonly' />
 			                            <div class='WPCSPBlockedURLPathError WPCSPHiddenEntry'></div>
 									<td>&nbsp;</td>
 									</tr></table>
 								</td>
 								<td class='tdWPCSPActionButtons'>
-									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e('Allow ' . strtoupper( $obj->violated_directive ) . ' Access' ,'wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
-									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e('Ignore Domain Violations','wpcsp') ?>" data-target='#<?php echo $TargetRow2ID ;?>' />
+									<input type="button" class="button-primary btnWPCSPAddSafeDomain" value="<?php _e( 'Allow ' . strtoupper( $obj->violated_directive ) . ' Access', 'wpcsp') ?>" data-target='#<?php echo $TargetRow2ID; ?>' />
+									<input type="button" class="button-primary btnWPCSPIgnoreDomain" value="<?php _e( 'Ignore Domain Violations','wpcsp') ?>" data-target='#<?php echo $TargetRow2ID; ?>' />
 									<div class='WPCSPInfoBox' style='display:none;'></div>
 								</td>
 							</tr>
-						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID;?>'><td colspan='4'></td></tr>
+						<tr class='trWPCSPViewErrors WPCSPHiddenEntry' id='<?php echo $TargetRow2ID; ?>'><td colspan='4'></td></tr>
 						<?php
-						elseif ( !empty( $obj->blocked_uri )) : ?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+						elseif ( !empty( $obj->blocked_uri ) ) : ?>
+							<tr data-violateddirective='<?php echo $obj->violated_directive; ?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='4'>
 									<p>Unknown blocked URI - could not be parsed: <?php echo esc_html( $obj->blocked_uri ); ?></p>
 								</td>
 							</tr>
 						<?php
 						else : ?>
-							<tr data-violateddirective='<?php echo $obj->violated_directive ;?>'>
+							<tr data-violateddirective='<?php echo $obj->violated_directive; ?>'>
 								<td class='tdWPCSPBlockedURLParts' colspan='4'>
 									<p>Blocked URI empty</p>
 								</td>
@@ -487,7 +514,7 @@ class WP_CSP_Admin extends WP_REST_Controller{
 						?>
 						</tbody>
 				<?php
-				endforeach ;
+				endforeach;
 				?>
 				</table>
 	          </div> <!-- end wpcsp-logadmin -->
@@ -505,18 +532,18 @@ class WP_CSP_Admin extends WP_REST_Controller{
 
 		// Check if the table exists - if not force it to be created.
 		if( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s",$LogTableName ) ) != $LogTableName) {
-			$installed_ver = false ;
+			$installed_ver = false;
 		}
 		// Otherwise check the table version is latest version.
 		else {
-			$installed_ver = get_option( self::wpCSPDBVersionOptionName );
+			$installed_ver = get_option( self::WPCSP_DB_VERSION_OPTION_NAME );
 		}
 
-		if ( $installed_ver != self::wpCSPDBVersion ) {
+		if ( $installed_ver != self::WPCSP_DB_VERSION ) {
 
 			$charset_collate = $wpdb->get_charset_collate();
 
-			$sql = "CREATE TABLE ".$LogTableName." (
+			$sql = "CREATE TABLE " . $LogTableName." (
 										id mediumint(9) NOT NULL AUTO_INCREMENT,
 										violated_directive varchar(50) NOT NULL default '',
 										blocked_uri varchar(1024) NOT NULL default '',
@@ -531,15 +558,15 @@ class WP_CSP_Admin extends WP_REST_Controller{
 										PRIMARY KEY  id (id),
 										KEY  violated_directive (violated_directive, blocked_uri(191) ),
 										KEY  createdon (createdon)
-								) " . $charset_collate . ";" ;
+								) " . $charset_collate . ";";
 
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 			$return = dbDelta( $sql );
 
 			// Only stop doing the update if nothing needs changing.
-			if ( empty( $return )){
+			if ( empty( $return ) ) {
 				// Store the table version in the database so we know whether it needs updating in the future.
-				update_option( self::wpCSPDBVersionOptionName, self::wpCSPDBVersion );
+				update_option( self::WPCSP_DB_VERSION_OPTION_NAME, self::WPCSP_DB_VERSION );
 			}
 		}
 
@@ -569,8 +596,9 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	 * Register the settings - part of admin_init hook
 	 */
 	public static function register_settings() {
-		register_setting( WP_CSP::SETTINGS_OPTIONS_SECTION,  // settings section
-							WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS // setting name
+		register_setting(
+			WP_CSP::SETTINGS_OPTIONS_SECTION,   // settings section.
+			WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS // setting name.
 		);
 	}
 
@@ -583,18 +611,18 @@ class WP_CSP_Admin extends WP_REST_Controller{
 
 		@ob_end_clean();
 
-		$ReturnStatus = true ;
-		$Data = array() ;
-		$HTML = "Unknown error" ;
+		$ReturnStatus = true;
+		$Data = array();
+		$HTML = "Unknown error";
 		$AdditionalReturn = array();
 
-		$SubAction = $request->get_param('subaction') ;
-		$ViolatedDirective = $request->get_param('violateddirective') ;
-		$BlockedURI = $request->get_param('blockeduri') ;
-		$Scheme = $request->get_param('scheme') ;
-		$Domain = $request->get_param('domain') ;
-		$Path = $request->get_param('path') ;
-		$File = $request->get_param('file') ;
+		$SubAction = $request->get_param('subaction');
+		$ViolatedDirective = $request->get_param('violateddirective');
+		$BlockedURI = $request->get_param('blockeduri');
+		$Scheme = $request->get_param('scheme');
+		$Domain = $request->get_param('domain');
+		$Path = $request->get_param('path');
+		$File = $request->get_param('file');
 
 		switch( $SubAction ) {
 			case 'getdata':
@@ -609,80 +637,80 @@ class WP_CSP_Admin extends WP_REST_Controller{
 				foreach ($rows as $obj) :
 					$Data[] = array( 'document_uri' => !empty( $obj->document_uri ) ? $obj->document_uri : '(not set)',
 							'useragent' => !empty( $obj->useragent ) ? $obj->useragent : '(not set)',
-							'numerrors' => $obj->numerrors , ) ;
+							'numerrors' => $obj->numerrors , );
 				endforeach;
 				$HTML = '';
-				break ;
+				break;
 
 			case 'addSafeDomain':
-				if( !empty( $Scheme) && empty( $Domain )) {
-					$BlockedURI = $Scheme . ':' ;
+				if( !empty( $Scheme) && empty( $Domain ) ) {
+					$BlockedURI = $Scheme . ':';
 				}
 				else {
-					if ( !empty( $Scheme) && !empty( $Domain )) {
-						$BlockedURI = $Scheme . "://" . $Domain ;
+					if ( !empty( $Scheme) && !empty( $Domain ) ) {
+						$BlockedURI = $Scheme . "://" . $Domain;
 					}
 					else {
-						$BlockedURI = $Domain ;
+						$BlockedURI = $Domain;
 					}
-					if ( !empty( $Path )) {
-						$BlockedURI .= $Path ;
-						if ( !empty( $File )) {
-							$BlockedURI .= $File ;
+					if ( !empty( $Path ) ) {
+						$BlockedURI .= $Path;
+						if ( !empty( $File ) ) {
+							$BlockedURI .= $File;
 						}
 					}
 				}
 				$BlockedURI = str_replace("\'","'",$BlockedURI);
 				$options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
-				$selected = !empty( $options[ $ViolatedDirective ] ) ? $options[ $ViolatedDirective ] : '' ;
-				$selected .= " " . $BlockedURI ;
-                $options[ $ViolatedDirective ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) ) ;
+				$selected = !empty( $options[ $ViolatedDirective ] ) ? $options[ $ViolatedDirective ] : '';
+				$selected .= " " . $BlockedURI;
+                $options[ $ViolatedDirective ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) );
 
 				$options = update_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS , $options );
 				$HTML = 'Successfully added <strong>'.esc_html( $BlockedURI ) .'</strong> to the <strong>' . strtoupper($ViolatedDirective) . '</strong> domains list';
-				break ;
+				break;
 			case 'addIgnoreDomain':
-				if( !empty( $Scheme) && empty( $Domain )) {
-					$BlockedURI = $Scheme . ':' ;
+				if( !empty( $Scheme) && empty( $Domain ) ) {
+					$BlockedURI = $Scheme . ':';
 				}
 				else {
-					if ( !empty( $Scheme) && !empty( $Domain )) {
-						$BlockedURI = $Scheme . "://" . $Domain ;
+					if ( !empty( $Scheme) && !empty( $Domain ) ) {
+						$BlockedURI = $Scheme . "://" . $Domain;
 					}
 					else {
-						$BlockedURI = $Domain ;
+						$BlockedURI = $Domain;
 					}
-					if ( !empty( $Path )) {
-						$BlockedURI .= $Path ;
-						if ( !empty( $File )) {
-							$BlockedURI .= $File ;
+					if ( !empty( $Path ) ) {
+						$BlockedURI .= $Path;
+						if ( !empty( $File ) ) {
+							$BlockedURI .= $File;
 						}
 					}
 				}
 				$options = get_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS );
-				$selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '' ;
-				$selected .= " " . $BlockedURI ;
-                $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) ) ;
+				$selected = !empty( $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] ) ? $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] : '';
+				$selected .= " " . $BlockedURI;
+                $options[ WP_CSP::SETTINGS_OPTIONS_VIOLATIONSTOIGNORE ] = implode(" ", WP_CSP::CleanPolicyOptionText( $selected ) );
 
 				$options = update_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS , $options );
 				$HTML = 'Successfully added <strong>'.$BlockedURI.'</strong> to the <strong>IGNORED</strong> domains list';
-				break ;
+				break;
 			case 'clearLogFile':
-				self::ClearLogFile() ;
+				self::ClearLogFile();
 				$HTML = 'Successfully cleared the log file. Refresh screen to see';
-				$ReturnStatus = true ;
-				break ;
+				$ReturnStatus = true;
+				break;
 			case 'TestURLChecker':
 				$HTML = self::TestURLChecker();
-				$ReturnStatus = true ;
-				break ;
+				$ReturnStatus = true;
+				break;
 			default:
 				$HTML = 'Unknown action';
 				$ReturnStatus = false;
-				break ;
+				break;
 		}
 		// response output
-		$return = array('success'=>$ReturnStatus, 'html' => $HTML, 'data' => $Data ) ;
+		$return = array('success'=>$ReturnStatus, 'html' => $HTML, 'data' => $Data );
 
 		return new WP_REST_Response( $return, 200 );
 	}
@@ -690,15 +718,15 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	 * What we do when the plugin is activated - create/update table.
 	 */
 	public static function plugin_activation() {
-		self::update_database() ;
-		wp_schedule_event( time(), 'daily', self::wpCSPDBCronJobName );
+		self::update_database();
+		wp_schedule_event( time(), 'daily', self::WPCSP_DB_CRON_JOB_NAME );
 	}
 
 	/*
 	 * What we do when the plugin is deactivated
 	 */
 	public static function plugin_deactivation() {
-		wp_clear_scheduled_hook( self::wpCSPDBCronJobName );
+		wp_clear_scheduled_hook( self::WPCSP_DB_CRON_JOB_NAME );
 	}
 	/*
 	 * What we do when the plugin is uninstalled - remove table, unregister options, remove cron
@@ -710,10 +738,10 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		unregister_setting( WP_CSP::SETTINGS_OPTIONS_SECTION,  // settings section
 							WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS // setting name
 		);
-		delete_option( self::wpCSPDBVersionOptionName  );
+		delete_option( self::WPCSP_DB_VERSION_OPTION_NAME  );
 		delete_option( WP_CSP::SETTINGS_OPTIONS_ALLOPTIONS  );
 
-		wp_clear_scheduled_hook( self::wpCSPDBCronJobName );
+		wp_clear_scheduled_hook( self::WPCSP_DB_CRON_JOB_NAME );
 	}
 
 	/**
@@ -722,63 +750,63 @@ class WP_CSP_Admin extends WP_REST_Controller{
 	 * @return array 			- Array of errors
 	 */
 	static private function FindCSPErrors( $PolicyKey, $Policies ) {
-		$return = array() ;
+		$return = array();
 		$SchemeTags = array( 'data', 'blob','mediastream','filesystem','http','https',);
-		if( is_array( $Policies)){
+		if( is_array( $Policies) ) {
 			foreach( $Policies as $Policy ) {
 				$StrippedPolicy = preg_replace("/[^a-zA-Z0-9\s]/", "", $Policy);
 				if ( $StrippedPolicy == 'self' && $Policy != "'self'") {
-					$return[] = "Entry for <strong>self</strong> should read <strong>'self'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>self</strong> should read <strong>'self'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'unsafeinline' && $Policy != "'unsafe-inline'") {
-					$return[] = "Entry for <strong>unsafe-inline</strong> should read <strong>'unsafe-inline'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>unsafe-inline</strong> should read <strong>'unsafe-inline'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'unsafeeval' && $Policy != "'unsafe-eval'") {
-					$return[] = "Entry for <strong>unsafe-eval</strong> should read <strong>'unsafe-eval'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>unsafe-eval</strong> should read <strong>'unsafe-eval'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'unsafehashedattributes' && $Policy != "'unsafe-hashed-attributes'") {
-					$return[] = "Entry for <strong>unsafe-hashed-attributes</strong> should read <strong>'unsafe-hashed-attributes'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>unsafe-hashed-attributes</strong> should read <strong>'unsafe-hashed-attributes'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'none' && $Policy != "'none'") {
-					$return[] = "Entry for <strong>none</strong> should read <strong>'none'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>none</strong> should read <strong>'none'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'strict-dynamic' && $Policy != "'strict-dynamic'") {
-					$return[] = "Entry for <strong>strict-dynamic</strong> should read <strong>'strict-dynamic'</strong> (with single quotes) - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>strict-dynamic</strong> should read <strong>'strict-dynamic'</strong> (with single quotes) - Policy: " .$Policy;
 				}
 				if ( substr( $StrippedPolicy ,0,4) == 'sha-' && ( substr( $Policy,0,1) != "'" || substr( $Policy,-1) != "'"  ) ) {
-					$return[] = "Entry for <strong>$Policy</strong> should start and end with single quotes - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>$Policy</strong> should start and end with single quotes - Policy: " .$Policy;
 				}
 				if ( substr( $StrippedPolicy ,0,6) == 'nonce-' ) {
-					$return[] = "Entry for <strong>'nonce-'</strong> should not exist - remove - Policy: " .$Policy ;
+					$return[] = "Entry for <strong>'nonce-'</strong> should not exist - remove - Policy: " .$Policy;
 				}
 
 				foreach( $SchemeTags as $SchemeTag ) {
 					if ( $StrippedPolicy == $SchemeTag && $Policy != $SchemeTag . ":") {
-						$return[] = "Entry for <strong>".$SchemeTag.":</strong> should read <strong>".$SchemeTag.":</strong> (with ending colon) - Policy: " .$Policy ;
+						$return[] = "Entry for <strong>" . $SchemeTag.":</strong> should read <strong>" . $SchemeTag.":</strong> (with ending colon) - Policy: " .$Policy;
 					}
 				}
-				if ( substr( $Policy,0,1) == '/'){
-					$return[] = "Entry should not start with a '/' - entry: " .$Policy ;
+				if ( substr( $Policy,0,1) == '/') {
+					$return[] = "Entry should not start with a '/' - entry: " .$Policy;
 				}
-				if ( strlen( $Policy ) > 2 && substr( $Policy,0,1) == '*' &&  substr( $Policy,1,1) != '.'){
-					$return[] = "Allow all subdomain entry should start '*.domain.com' - entry: " .$Policy ;
+				if ( strlen( $Policy ) > 2 && substr( $Policy,0,1) == '*' &&  substr( $Policy,1,1) != '.') {
+					$return[] = "Allow all subdomain entry should start '*.domain.com' - entry: " .$Policy;
 				}
 				if ( $StrippedPolicy == 'data' && $PolicyKey == 'script-src' ) {
-					$return[] = "Avoid using 'data:' for script-src: " .$Policy ;
+					$return[] = "Avoid using 'data:' for script-src: " .$Policy;
 				}
 
 			}
 		}
-		return $return ;
+		return $return;
 	}
 
 
 	/**
-	 * checks the URL checker, see if its reading the ignored URLs correctly.
+	 * Checks the URL checker, see if its reading the ignored URLs correctly.
 	 */
 	private static function TestURLChecker() {
 
-		$return = array() ;
+		$return = array();
 
 		// Testing various ways of checking for errors in option arrays
 		// array( BlockedURI,  OptionString, ExpectedTestResult )
@@ -788,159 +816,159 @@ class WP_CSP_Admin extends WP_REST_Controller{
 		// True indicates the routine should find a match, and false not a match.
 
 		$TestArray = array(
-				array( 'data:', 'data:', true),
-				array( 'http:', 'http:', true),
-				array( 'https:', 'https:', true),
-				array( 'data:', 'http:', false),
-				array( 'data:', 'https:', false),
-				array( 'http:', 'data:', false),
-				array( 'https:', 'data:', false),
+				array( 'data:', 'data:', true ),
+				array( 'http:', 'http:', true ),
+				array( 'https:', 'https:', true ),
+				array( 'data:', 'http:', false ),
+				array( 'data:', 'https:', false ),
+				array( 'http:', 'data:', false ),
+				array( 'https:', 'data:', false ),
 
-				array( 'data:urlencoded 64 dsdsdsddsd', 'data:', true),
-				array( 'http://www.example.com', 'http:', true),
-				array( 'https://www.example.com', 'https:', true),
+				array( 'data:urlencoded 64 dsdsdsddsd', 'data:', true ),
+				array( 'http://www.example.com', 'http:', true ),
+				array( 'https://www.example.com', 'https:', true ),
 
-				array( 'data:urlencoded 64 dsdsdsddsd', 'http:', false),
-				array( 'http://www.example.com', 'https:', false),
-				array( 'https://www.example.com', 'data:', false),
+				array( 'data:urlencoded 64 dsdsdsddsd', 'http:', false ),
+				array( 'http://www.example.com', 'https:', false ),
+				array( 'https://www.example.com', 'data:', false ),
 
-				array( site_url(), "'self'", true),
-				array( site_url(), "data:", false),
-				array( site_url(), "http://www.example.com", false),
-				array( site_url(), "https://www.example.com", false),
-				array( site_url(), "www.example.com", false),
-				array( site_url(), "*.example.com", false),
+				array( site_url(), "'self'", true ),
+				array( site_url(), "data:", false ),
+				array( site_url(), "http://www.example.com", false ),
+				array( site_url(), "https://www.example.com", false ),
+				array( site_url(), "www.example.com", false ),
+				array( site_url(), "*.example.com", false ),
 
-				array( 'http://www.example.com', "http://www.example.com", true),
-				array( 'http://www.example.com', "https://www.example.com", false),
-				array( 'www.example.com', "https://www.example.com", false),
-				array( 'www.example.com', "http://www.example.com", false),
-				array( 'www.example.com', "www.example.com", true),
+				array( 'http://www.example.com', "http://www.example.com", true ),
+				array( 'http://www.example.com', "https://www.example.com", false ),
+				array( 'www.example.com', "https://www.example.com", false ),
+				array( 'www.example.com', "http://www.example.com", false ),
+				array( 'www.example.com', "www.example.com", true ),
 
-				array( 'http://www.example.com/test/url', "http://www.example.com", true),
-				array( 'http://www.example.com/test/url', "https://www.example.com", false),
-				array( 'http://www.example.com/test/url', "www.example.com", true),
-				array( 'www.example.com/test/url', "https://www.example.com", false),
-				array( 'www.example.com/test/url', "http://www.example.com", false),
-				array( 'www.example.com/test/url', "www.example.com", true),
+				array( 'http://www.example.com/test/url', "http://www.example.com", true ),
+				array( 'http://www.example.com/test/url', "https://www.example.com", false ),
+				array( 'http://www.example.com/test/url', "www.example.com", true ),
+				array( 'www.example.com/test/url', "https://www.example.com", false ),
+				array( 'www.example.com/test/url', "http://www.example.com", false ),
+				array( 'www.example.com/test/url', "www.example.com", true ),
 
-				array( 'http://www.example.com', "www.example.com", true),
-				array( 'http://www.example.com', "*.example.com", true),
-				array( 'https://www.example.com', "www.example.com", true),
-				array( 'https://www.example.com', "*.example.com", true),
-				array( 'ssss://www.example.com', "www.example.com", true),
-				array( 'ssss://www.example.com', "*.example.com", true),
-				array( 'http://www.example.com', "*example.com", false),
-				array( 'https://www.example.com', "*example.com", false),
-				array( 'ssss://www.example.com', "*example.com", false),
-				array( 'http://www.example.com', ".example.com", false),
-				array( 'https://www.example.com', ".example.com", false),
-				array( 'ssss://www.example.com', ".example.com", false),
-				array( 'http://www.example.com', "example.com", false),
-				array( 'https://www.example.com', "example.com", false),
-				array( 'ssss://www.example.com', "example.com", false),
-
-
-				array( 'http://www.example.com/test/url', "www.example.com", true),
-				array( 'http://www.example.com/test/url', "*.example.com", true),
-				array( 'https://www.example.com/test/url', "www.example.com", true),
-				array( 'https://www.example.com/test/url', "*.example.com", true),
-				array( 'ssss://www.example.com/test/url', "www.example.com", true),
-				array( 'ssss://www.example.com/test/url', "*.example.com", true),
-				array( 'http://www.example.com/test/url', "*example.com", false),
-				array( 'https://www.example.com/test/url', "*example.com", false),
-				array( 'ssss://www.example.com/test/url', "*example.com", false),
-				array( 'http://www.example.com/test/url', ".example.com", false),
-				array( 'https://www.example.com/test/url', ".example.com", false),
-				array( 'ssss://www.example.com/test/url', ".example.com", false),
-				array( 'http://www.example.com/test/url', "example.com", false),
-				array( 'https://www.example.com/test/url', "example.com", false),
-				array( 'ssss://www.example.com/test/url', "example.com", false),
-
-				array( 'http://www.example.com', "www.notexample.com", false),
-				array( 'http://www.example.com', "*.notexample.com", false),
-				array( 'https://www.example.com', "www.notexample.com", false),
-				array( 'https://www.example.com', "*.notexample.com", false),
-				array( 'ssss://www.example.com', "www.notexample.com", false),
-				array( 'ssss://www.example.com', "*.notexample.com", false),
+				array( 'http://www.example.com', "www.example.com", true ),
+				array( 'http://www.example.com', "*.example.com", true ),
+				array( 'https://www.example.com', "www.example.com", true ),
+				array( 'https://www.example.com', "*.example.com", true ),
+				array( 'ssss://www.example.com', "www.example.com", true ),
+				array( 'ssss://www.example.com', "*.example.com", true ),
+				array( 'http://www.example.com', "*example.com", false ),
+				array( 'https://www.example.com', "*example.com", false ),
+				array( 'ssss://www.example.com', "*example.com", false ),
+				array( 'http://www.example.com', ".example.com", false ),
+				array( 'https://www.example.com', ".example.com", false ),
+				array( 'ssss://www.example.com', ".example.com", false ),
+				array( 'http://www.example.com', "example.com", false ),
+				array( 'https://www.example.com', "example.com", false ),
+				array( 'ssss://www.example.com', "example.com", false ),
 
 
-				array( 'http://www.example.com/path/to/file/', "*.notexample.com", false),
-				array( 'https://www.example.com/path/to/file/', "www.notexample.com", false),
-				array( 'http://www.example.com/path/to/file/', "*.example.com", true),
-				array( 'https://www.example.com/path/to/file/', "www.example.com", true),
-				array( 'http://www.example.com/path/to/file/', "*.example.com/path/", false),
-				array( 'https://www.example.com/path/to/file/', "www.example.com/path/", false),
-				array( 'http://www.example.com/path/to/file/', "*.example.com/path/to", false),
-				array( 'https://www.example.com/path/to/file/', "www.example.com/path/to", false),
-				array( 'http://www.example.com/path/to/file/', "*.example.com/path/to/file/", true),
-				array( 'https://www.example.com/path/to/file/', "www.example.com/path/to/file/", true),
+				array( 'http://www.example.com/test/url', "www.example.com", true ),
+				array( 'http://www.example.com/test/url', "*.example.com", true ),
+				array( 'https://www.example.com/test/url', "www.example.com", true ),
+				array( 'https://www.example.com/test/url', "*.example.com", true ),
+				array( 'ssss://www.example.com/test/url', "www.example.com", true ),
+				array( 'ssss://www.example.com/test/url', "*.example.com", true ),
+				array( 'http://www.example.com/test/url', "*example.com", false ),
+				array( 'https://www.example.com/test/url', "*example.com", false ),
+				array( 'ssss://www.example.com/test/url', "*example.com", false ),
+				array( 'http://www.example.com/test/url', ".example.com", false ),
+				array( 'https://www.example.com/test/url', ".example.com", false ),
+				array( 'ssss://www.example.com/test/url', ".example.com", false ),
+				array( 'http://www.example.com/test/url', "example.com", false ),
+				array( 'https://www.example.com/test/url', "example.com", false ),
+				array( 'ssss://www.example.com/test/url', "example.com", false ),
 
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.notexample.com", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.notexample.com", false),
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com", true),
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/", false),
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to", false),
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to/file/", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to/file/", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to/file/", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/to/file/", true),
-				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to/file/thefile.php", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to/file/thefile.php", true),
-				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to/file/thefile.php", false),
-				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/to/file/thefile.php", true),
+				array( 'http://www.example.com', "www.notexample.com", false ),
+				array( 'http://www.example.com', "*.notexample.com", false ),
+				array( 'https://www.example.com', "www.notexample.com", false ),
+				array( 'https://www.example.com', "*.notexample.com", false ),
+				array( 'ssss://www.example.com', "www.notexample.com", false ),
+				array( 'ssss://www.example.com', "*.notexample.com", false ),
 
-				array( '', "*.notexample.com", false),
-				array( '', "", false),
-				array( 'http://www.example.com', "", false),
-				array( 'http://www.example.com', "none", false),
-				array( 'http://www.example.com', "'none'", false),
-				array( "'none'", "'none'", false),
 
-				array( 'data:urlencoded 64 dsdsdsddsd', '*', false), // see http://www.w3.org/TR/CSP2/#match-source-expression
-				array( 'http://www.example.com', '*', true),
-				array( 'https://www.example.com', '*', true),
+				array( 'http://www.example.com/path/to/file/', "*.notexample.com", false ),
+				array( 'https://www.example.com/path/to/file/', "www.notexample.com", false ),
+				array( 'http://www.example.com/path/to/file/', "*.example.com", true ),
+				array( 'https://www.example.com/path/to/file/', "www.example.com", true ),
+				array( 'http://www.example.com/path/to/file/', "*.example.com/path/", false ),
+				array( 'https://www.example.com/path/to/file/', "www.example.com/path/", false ),
+				array( 'http://www.example.com/path/to/file/', "*.example.com/path/to", false ),
+				array( 'https://www.example.com/path/to/file/', "www.example.com/path/to", false ),
+				array( 'http://www.example.com/path/to/file/', "*.example.com/path/to/file/", true ),
+				array( 'https://www.example.com/path/to/file/', "www.example.com/path/to/file/", true ),
+
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.notexample.com", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.notexample.com", false ),
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com", true ),
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/", false ),
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to", false ),
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to/file/", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to/file/", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to/file/", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/to/file/", true ),
+				array( 'http://www.example.com/path/to/file/thefile.php', "*.example.com/path/to/file/thefile.php", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "www.example.com/path/to/file/thefile.php", true ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "http://www.example.com/path/to/file/thefile.php", false ),
+				array( 'https://www.example.com/path/to/file/thefile.php', "https://www.example.com/path/to/file/thefile.php", true ),
+
+				array( '', "*.notexample.com", false ),
+				array( '', "", false ),
+				array( 'http://www.example.com', "", false ),
+				array( 'http://www.example.com', "none", false ),
+				array( 'http://www.example.com', "'none'", false ),
+				array( "'none'", "'none'", false ),
+
+				array( 'data:urlencoded 64 dsdsdsddsd', '*', false ), // see http://www.w3.org/TR/CSP2/#match-source-expression
+				array( 'http://www.example.com', '*', true ),
+				array( 'https://www.example.com', '*', true ),
 
 
 		);
 
 		foreach( $TestArray as $Test ) {
-			$return[] =  "------------ Starting test:" . print_r( $Test,true) ;
-			$ret = WP_CSP::IsURIInOptionString( $Test[0], $Test[1] ) ;
+			$return[] =  "------------ Starting test:" . print_r( $Test,true );
+			$ret = WP_CSP::IsURIInOptionString( $Test[0], $Test[1] );
 			if ( $ret !== $Test[2] ) {
-				$return[] =  "****** failed test:" . print_r( $Test,true);
+				$return[] =  "****** failed test:" . print_r( $Test,true );
 				$return[] =  "returned:" . print_r( $ret , true );
-				break ;
+				break;
 			}
 		}
 
 
 		// Test end to end including logging.
-		$CSPViolation = array( 'csp-report' => array( 'effective-directive' => 'img-src' ,
-				'blocked-uri' => 'http://b.wallyworld.zzzz' ) ) ;
+		$CSPViolation = array( 'csp-report' => array( 'effective-directive' => 'img-src',
+				'blocked-uri' => 'http://b.wallyworld.zzzz' ) );
 		if ( WP_CSP::ProcessPolicyViolation( $CSPViolation ) === false ) {
-			$return[] =  "Should be logging b.wallyworld.zzzz as it is not blocked by ignored urls<br>\n ;" ;
+			$return[] =  "Should be logging b.wallyworld.zzzz as it is not blocked by ignored urls<br>\n;";
 		}
 
 		$return[] =  "Finished tests with no issues.<br>\n";
 
-		return "<li>" . implode("</li><li>", $return ) . "</li>";
+		return "<li>" . implode( "</li><li>", $return ) . "</li>";
 	}
 }
 
-$WP_CSP_Admin = new WP_CSP_Admin() ;
-add_action('init',array( $WP_CSP_Admin ,"init"));
+$WP_CSP_Admin = new WP_CSP_Admin();
+add_action('init',array( $WP_CSP_Admin ,"init") );
 // If action "rest_api_init" hasn't run yet then use that, otherwise we have the route server in place, just register route
-if ( did_action('rest_api_init') == 0 ){
-	add_action('rest_api_init',array( $WP_CSP_Admin,"register_routes"));
+if ( did_action( 'rest_api_init' ) == 0 ) {
+	add_action( 'rest_api_init', array( $WP_CSP_Admin, "register_routes" ) );
 }
 else {
 	$WP_CSP_Admin->register_routes();

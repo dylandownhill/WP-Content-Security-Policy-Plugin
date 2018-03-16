@@ -6,7 +6,7 @@
 <p>With the advent of Content Security Policy version 3 the workings for CSP changed (note: this is the W3C Content Security Policy version 3, not the plugin's version).</p>
 <ul>
 <li>In CSP version 1 and 2 you have to declare each host name you trust individually, this works great for most sites; however, it can become an issue on sites that have a lot of advertising or other content and you can end up with dozens of sites with permissions.</li>
-<li>In CSP version 3 you declare the scripts and styles that you trust using a 'nonce' (random string of characters, different to Wordpress Nonces), they then pass on the trust to whatever they do. Nonces change on 
+<li>In CSP version 3 you declare the scripts and styles that you trust using a 'nonce' (random string of characters, different to WordPress Nonces), they then pass on the trust to whatever they do. Nonces change on 
 <strong>every single page refresh</strong>.</li>
 </ul>
 <p>Ideally you would use CSP version 3; however, a lot of scripts do not work well with CSP version 3, so you might have to revert to using version 2 syntax for now.
