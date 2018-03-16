@@ -34,12 +34,11 @@ module.exports = function(grunt) {
                     nonull: true,
                     src: [
                         'readme.txt',
-                        'CHANGELOG.md',
+                        //'CHANGELOG.md',
                         '*.php',
                         'includes/**',
                         'admin/**',
                         '!**/scss/**',
-                        'js/**',
                     ],
                     dest: 'build/'
                 }],
@@ -96,13 +95,6 @@ module.exports = function(grunt) {
                         src: ['*.scss'],
                         dest: 'build/admin/css',
                         ext: '.min.css'
-                    },
-                    {
-                        expand: true,
-                        cwd: 'public/scss',
-                        src: ['*.scss'],
-                        dest: 'build/public/css',
-                        ext: '.min.css'
                     }
                 ]
             },
@@ -117,13 +109,6 @@ module.exports = function(grunt) {
                         cwd: 'admin/scss',
                         src: ['*.scss'],
                         dest: 'admin/css',
-                        ext: '.css'
-                    },
-                    {
-                        expand: true,
-                        cwd: 'public/scss',
-                        src: ['*.scss'],
-                        dest: 'public/css',
                         ext: '.css'
                     }
                 ]
@@ -143,22 +128,10 @@ module.exports = function(grunt) {
                 files: [{
                     expand: true,
                     cwd: 'admin/css',
-                    src: ['**/*.css', '!default-styles.css'],
+                    src: ['**/*.css'],
                     dest: 'admin/css',
                     ext: '.css'
                 }]
-            },
-            dev_default_styles: {
-                files: [{
-                    expand: true,
-                    cwd: 'admin/css',
-                    src: ['default-styles.css'],
-                    dest: 'admin/css',
-                    ext: '.css'
-                }],
-                options: {
-                    map: false,
-                }
             },
             dist: {
                 files: [{
@@ -181,7 +154,7 @@ module.exports = function(grunt) {
 
         minify: {
             dist: {
-                files: grunt.file.expandMapping(['js/**/*.js', '!js/**/*min.js'], '', {
+                files: grunt.file.expandMapping(['admin/js/**/*.js', '!admin/js/**/*.min.js'], '', {
                     rename: function(destBase, destPath) {
                         return destBase + destPath.replace('.js', '.min.js');
                     }
@@ -222,26 +195,20 @@ module.exports = function(grunt) {
         });
     });
 
-    grunt.registerTask('phpcs', [
-        'composer:dev:phpcs',
-    ]);
-
     grunt.registerTask('build', [
         'clean:build',
-        'copy:main',
-        'newer:delegate:sass:dist',
+        'newer:sass:dist',
         'newer:postcss:dist',
-        'newer:minify'
+        'newer:minify',
+        'copy:main',
     ]);
 
     grunt.registerTask('deploy', [
-        'phpcs',
         'jscs',
         'build',
         'wp_deploy:release'
     ]);
     grunt.registerTask('trunk', [
-        'phpcs',
         'build',
         'wp_deploy:trunk'
     ]);
@@ -253,7 +220,6 @@ module.exports = function(grunt) {
     ]);
 
     grunt.registerTask('default', [
-        'phpcs',
         'jscs',
         'newer:delegate:sass:dev',
         'newer:postcss:dev',

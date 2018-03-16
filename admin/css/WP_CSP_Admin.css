@@ -1,0 +1,129 @@
+.wpcsp-form-table textarea {
+  background-color: #fff;
+  min-height: 60px;
+  max-height: 300px;
+  width: 80%;
+  float: left;
+}
+
+.wpcsp-form-table p {
+  margin: 5px 0 1em 0;
+}
+
+.wpcsp_option_cell {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-flow: column;
+          flex-flow: column;
+}
+
+.wpcsp-WP_CSP_Admin label {
+  clear: both;
+  display: block;
+}
+
+.WPCSPHiddenEntry {
+  display: none !important;
+}
+
+.WPCSPDisabledEntry {
+  background-color: #ccc;
+  color: #999;
+}
+
+.tdWPCSPViolatedDirective {
+  max-width: 300px;
+  min-width: 200px;
+}
+
+.tdWPCSPBlockedURL {
+  max-width: 300px;
+  min-width: 200px;
+  overflow: hidden;
+}
+
+.tdWPCSPNumErrors {
+  max-width: 10%;
+  min-width: 50px;
+  padding-right: 10px;
+  text-align: right;
+}
+
+.tdWPCSPActionButtons {
+  max-width: 20%;
+  min-width: 200px;
+}
+
+.wpcsp-logoferrors thead td,
+.wpcsp_option_errors thead td {
+  font-weight: bold;
+}
+
+.wpcsp-logoferrors thead .tdWPCSPNumErrors {
+  font-weight: bold;
+  padding-right: 10px;
+  text-align: right;
+}
+
+.wpcsp_option_description, wpcsp_option_fallback {
+  clear: both;
+}
+
+select {
+  float: left;
+}
+
+.wpcsp_option_row td,
+.wpcsp_option_row th {
+  vertical-align: top;
+  overflow: hidden;
+}
+
+.wpcsp_option_row th {
+  padding-top: 10px;
+  pading-right: 10px;
+  min-width: 200px;
+  text-align: right;
+}
+
+.wpcsp-WP_CSP_Admin table {
+  border-collapse: collapse;
+}
+
+.wpcsp-WP_CSP_Admin table tbody tr:hover,
+.wpcsp-WP_CSP_Admin table tbody[data-group]:hover {
+  background-color: #ffffcc;
+  border: 1px solid red;
+}
+
+.wpcsp-WP_CSP_Admin table tbody[data-group]:hover tr:hover {
+  border: none;
+}
+
+.wpcsp-WP_CSP_Admin table table tr td {
+  padding: 5px;
+}
+
+.wpcsp-WP_CSP_Admin table table thead tr td {
+  background-color: #e0e0e0;
+}
+
+.WPCSPBlockedURLFileError {
+  clear: both;
+}
+
+.wpcsp_option_errors, .wpcsp_option_errors li {
+  color: #ff0000;
+}
+
+.wpcsp_option_warnings, .wpcsp_option_warnings li {
+  color: #800080;
+}
+
+.wpscp_Cannot_Allow {
+  display: inline-block;
+}
+/*# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImFkbWluL3Njc3MvV1BfQ1NQX0FkbWluLnNjc3MiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBSUE7RUFFSSx1QkFBc0I7RUFDdEIsaUJBQWdCO0VBQ2hCLGtCQUFpQjtFQUNqQixXQUFVO0VBQ1YsWUFBVztDQUNaOztBQVBIO0VBVUksb0JBQW1CO0NBQ3BCOztBQUdGO0VBQ0MscUJBQVk7RUFBWixxQkFBWTtFQUFaLGNBQVk7RUFDWiw2QkFBaUI7RUFBakIsOEJBQWlCO01BQWpCLHNCQUFpQjtVQUFqQixrQkFBaUI7Q0FDakI7O0FBRUY7RUFDQyxZQUFVO0VBQ1YsZUFBYTtDQUNiOztBQUdEO0VBQ0UseUJBQXdCO0NBQ3pCOztBQUNEO0VBQ0UsdUJBQXNCO0VBQ3RCLFlBQVc7Q0FDWjs7QUFDRDtFQUNFLGlCQUFnQjtFQUNoQixpQkFBZ0I7Q0FDakI7O0FBQ0Q7RUFDRSxpQkFBZ0I7RUFDaEIsaUJBQWdCO0VBQ2hCLGlCQUFnQjtDQUNqQjs7QUFDRDtFQUNFLGVBQWM7RUFDZCxnQkFBZTtFQUNmLG9CQUFtQjtFQUNuQixrQkFBaUI7Q0FDbEI7O0FBQ0Q7RUFDRSxlQUFjO0VBQ2QsaUJBQWdCO0NBQ2pCOztBQUNEOztFQUVFLGtCQUFpQjtDQUNsQjs7QUFDRDtFQUNFLGtCQUFpQjtFQUNqQixvQkFBbUI7RUFDbkIsa0JBQWlCO0NBQ2xCOztBQUNEO0VBQ0UsWUFBVztDQUNaOztBQUNEO0VBQ0UsWUFBVztDQUNaOztBQUVEOztFQUdJLG9CQUFtQjtFQUNuQixpQkFBZ0I7Q0FDakI7O0FBTEg7RUFRRyxrQkFBaUI7RUFDakIsbUJBQWlCO0VBQ2pCLGlCQUFnQjtFQUNiLGtCQUFpQjtDQUNwQjs7QUFHSDtFQUNFLDBCQUF5QjtDQW1CMUI7O0FBcEJEOztFQUtJLDBCQUF5QjtFQUN6QixzQkFBb0I7Q0FDckI7O0FBUEg7RUFVSSxhQUFXO0NBQ1g7O0FBWEo7RUFjSSxhQUFZO0NBQ2I7O0FBZkg7RUFrQkksMEJBQXdCO0NBQ3pCOztBQUdIO0VBQ0MsWUFBVTtDQUNWOztBQUNEO0VBRUksZUFBYTtDQUNkOztBQUVIO0VBRUksZUFBYTtDQUNkOztBQUdIO0VBQ0Msc0JBQW9CO0NBQ3BCIiwiZmlsZSI6IldQX0NTUF9BZG1pbi5jc3MifQ== */
